@@ -1,18 +1,20 @@
 import * as THREE from "three";
 import * as RAPIER from "@dimforge/rapier3d-compat";
-import { Entity, type EntityAnimationMap, type EntityId } from "./Entity";
+import { Entity, type EntityId } from "../core/entity/Entity";
 import {
 	createModelLoader,
 	tryAsyncLoadModel,
 	tryResolveAnimationActions,
-} from "./loaderHelpers";
-import type { AnimationResolver } from "./loaderHelpers";
-import { EVENT, EventSystem } from "../EventSystem";
-import { QuaternionVisualizer } from "../rendering/QuaternionVisualizer";
+	type EntityAnimationMap,
+} from "../core/utils/modelLoaderUtils";
+import type { AnimationResolver } from "../core/utils/modelLoaderUtils";
+import { EVENT, EventSystem } from "../core/events/EventSystem";
+import { QuaternionVisualizer } from "./utilObjects/QuaternionVisualizer";
 
-// Definitions for entity
+// --- Definitions for entity ---
 const MODEL_PATH: string = "/models/robots/Cute_Bot.glb";
 const ENTITY_ID: EntityId = "player";
+// ---
 const ANIMATION_RESOLVERS: AnimationResolver[] = [
 	{
 		intendedName: "walking",
@@ -25,21 +27,12 @@ const ANIMATION_RESOLVERS: AnimationResolver[] = [
 		},
 	},
 ];
-
+// ---
 const QUATERNION_VISUALIZER_OFFSET = new THREE.Vector3(0, 3.5, 0);
-
-const DIRECTION_TO_VECTOR: Record<string, THREE.Vector3> = {
-	forward: new THREE.Vector3(0, 0, -1),
-	left: new THREE.Vector3(-1, 0, 0),
-	backward: new THREE.Vector3(0, 0, 1),
-	right: new THREE.Vector3(1, 0, 0),
-	up: new THREE.Vector3(0, 1, 0),
-	down: new THREE.Vector3(0, -1, 0),
-} as const;
+// ---
 
 export class Player extends Entity {
 	private events: EventSystem;
-	public model: THREE.Group;
 	private quaternionVisualizer: QuaternionVisualizer | null = null;
 	// Character model
 	public mixer: THREE.AnimationMixer;
@@ -52,7 +45,7 @@ export class Player extends Entity {
 	public movingForces: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
 	private isLoading: boolean = false;
 	private isDisposed: boolean = false;
-	private boundMoveCommandHandler: ((payload: { command: "MOVE_START" | "MOVE_END"; direction: string; }) => void) | null = null;
+
 
 	constructor(events: EventSystem) {
 		super(ENTITY_ID);
@@ -83,34 +76,31 @@ export class Player extends Entity {
 
 	private initEventListeners(): void {
 		this.boundMoveCommandHandler = this.handleMoveCommand.bind(this);
-		this.events.on(
-			EVENT.PLAYER_MOVE_COMMAND,
-			this.boundMoveCommandHandler
-		);
+		this.events.on(EVENT.PLAYER_MOVE_COMMAND, this.boundMoveCommandHandler);
 	}
 
 	private updateMovingForces(forceVector: THREE.Vector3): void {
 		const prev = this.movingForces.clone();
 		this.movingForces.add(forceVector);
-		
+
 		// Ensure horizontal movement forces don't exceed 1.0 in magnitude
 		// This normalizes XZ plane movement while preserving Y
 		if (
-			Math.abs(this.movingForces.x) > 0.01 || 
+			Math.abs(this.movingForces.x) > 0.01 ||
 			Math.abs(this.movingForces.z) > 0.01
 		) {
 			const horizontalLength = Math.sqrt(
-				this.movingForces.x * this.movingForces.x + 
-				this.movingForces.z * this.movingForces.z
+				this.movingForces.x * this.movingForces.x +
+					this.movingForces.z * this.movingForces.z
 			);
-			
+
 			if (horizontalLength > 1.0) {
 				const scale = 1.0 / horizontalLength;
 				this.movingForces.x *= scale;
 				this.movingForces.z *= scale;
 			}
 		}
-		
+
 		this.events.emit(EVENT.ENTITY_FORCE_VECTOR_UPDATED, {
 			entityId: this.id,
 			prev,
@@ -164,7 +154,7 @@ export class Player extends Entity {
 	public dispose(): void {
 		console.log("[Player] Disposing player");
 		this.isDisposed = true;
-		
+
 		// Clean up event listeners
 		if (this.boundMoveCommandHandler) {
 			this.events.off(EVENT.PLAYER_MOVE_COMMAND, this.boundMoveCommandHandler);
@@ -172,7 +162,7 @@ export class Player extends Entity {
 		}
 
 		// Clean up animations
-		this.animationActions.forEach(action => action.stop());
+		this.animationActions.forEach((action) => action.stop());
 		this.animationActions.clear();
 
 		// Clean up mixer
@@ -191,10 +181,10 @@ export class Player extends Entity {
 		if (this.model) {
 			this.model.clear();
 		}
-		
+
 		// Emit event that entity is disposed
 		this.events.emit(EVENT.ENTITY_DISPOSED, {
-			entityId: this.id
+			entityId: this.id,
 		});
 	}
 
@@ -220,7 +210,7 @@ export class Player extends Entity {
 
 	private async loadModel(): Promise<void> {
 		if (this.isDisposed) return;
-		
+
 		console.log("[Player] loadModel function called");
 		const modelLoader = createModelLoader();
 		try {
@@ -231,7 +221,9 @@ export class Player extends Entity {
 			);
 
 			if (this.isDisposed) {
-				console.log("[Player] Player was disposed during model load, cleaning up");
+				console.log(
+					"[Player] Player was disposed during model load, cleaning up"
+				);
 				model.clear();
 				mixer.stopAllAction();
 				return;

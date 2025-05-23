@@ -1,4 +1,4 @@
-import { EventSystem, EVENT } from "../EventSystem";
+import { EventSystem, EVENT } from "../core/events/EventSystem";
 import type { GameMode } from "../GameManager";
 
 // Type for defining actions based on game mode for a specific key

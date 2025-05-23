@@ -4,7 +4,6 @@ import {
 	GLTFLoader,
 } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
-import { type EntityAnimationMap } from "./Entity";
 
 const DRACO_PATH = "/draco/";
 
@@ -92,11 +91,15 @@ export function defaultOnLoad(gltf: GLTF): {
 	return { model, mixer, animations };
 }
 
+// --- Animations ---
+
 export type AnimationResolver = {
 	intendedName: string;
 	potentialNames: string[];
 	actionCallback?: (action: THREE.AnimationAction) => void;
 };
+
+export type EntityAnimationMap = Map<string, THREE.AnimationAction>;
 
 export function tryResolveAnimationActions(
 	animationResolvers: AnimationResolver[],

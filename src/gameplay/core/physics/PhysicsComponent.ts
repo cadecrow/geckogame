@@ -1,20 +1,17 @@
 import * as RAPIER from "@dimforge/rapier3d-compat";
-import { Entity } from "../entity/Entity";
+import { Component } from "../ecs/Component";
+import type { Entity } from "../ecs/Entity";
 
-export class PhysicsComponent {
-	public entity: Entity;
-	public rbDesc: RAPIER.RigidBodyDesc;
-	public colliderDesc: RAPIER.ColliderDesc;
-	public rigidBody: RAPIER.RigidBody;
-	public collider: RAPIER.Collider;
+export interface IPhysicsEntity extends Entity {
+	rigidBodies: RAPIER.RigidBody[];
+	colliders: RAPIER.Collider[];
+	initPhysics(): void; // is there a good way to make this generic? sometimes, there will be multiple colliders and rigid bodies for a given entity
+	updatePhysics(deltaTime: number): void;
+	disposePhysics(): void;
+}
 
-	constructor(
-		entity: Entity,
-		rbDesc: RAPIER.RigidBodyDesc,
-		colliderDesc: RAPIER.ColliderDesc
-	) {
-		this.entity = entity;
-		this.rbDesc = rbDesc;
-		this.colliderDesc = colliderDesc;
+export class PhysicsComponent extends Component {
+	constructor(entity: IPhysicsEntity) {
+		super(entity);
 	}
 }

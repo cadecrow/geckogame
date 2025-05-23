@@ -2,7 +2,7 @@ import { UIManager } from "./ui/UIManager";
 import { RenderingSystem } from "./core/rendering/RenderingSystem";
 import { EVENT, EventSystem } from "./core/events/EventSystem";
 import { PhysicsSystem } from "./core/physics/PhysicsSystem";
-import { Entity, type EntityId } from "./core/entity/Entity";
+import { Entity, type EntityId } from "./core/ecs/Entity";
 import { LandingPlane } from "./entities/LandingPlane";
 import { Player } from "./entities/Player";
 import { Starship } from "./entities/Starship";

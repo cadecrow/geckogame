@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import * as RAPIER from "@dimforge/rapier3d-compat";
-import { Entity, type EntityId } from "../core/entity/Entity";
+import { Entity, type EntityId } from "../core/ecs/Entity";
 import { getTrimeshBodyAndColliders } from "../core/utils/physicsUtils";
 import type { EventSystem } from "../core/events/EventSystem";
 import type { RenderingComponent } from "../core/rendering/RenderingComponent";
@@ -23,8 +23,7 @@ export class LandingPlane extends Entity {
 	}
 	
 	this.initRender // Help Here
-}
-// const landingPlane = initializeRenderingAttributes();
+}// const landingPlane = initializeRenderingAttributes();
 // const { rbDesc, collidersDesc } = initializePhysicsAttributes(landingPlane);
 
 function initializeRenderingAttributes(): THREE.Mesh {

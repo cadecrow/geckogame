@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import * as RAPIER from "@dimforge/rapier3d-compat";
-import { Entity, type EntityAnimationMap, type EntityId } from "../core/entity/Entity";
+import { Entity, type EntityAnimationMap, type EntityId } from "../core/ecs/Entity";
 import {
 	createModelLoader,
 	tryAsyncLoadModel,

@@ -1,12 +1,12 @@
 import * as RAPIER from "@dimforge/rapier3d-compat";
-import { EVENT, EventSystem } from "../events/EventSystem";
-import { Entity, type EntityId } from "../entity/Entity";
+import { EventSystem } from "../events/EventSystem";
+import { Entity, type EntityId } from "../ecs/Entity";
+import { System } from "../ecs/System";
 
 export const GRAVITY_ACCELERATION = 9.81;
 
-export class PhysicsSystem {
+export class PhysicsSystem extends System {
 	private readonly events: EventSystem;
-	private readonly gameEntities: Map<EntityId, Entity>;
 	// ---
 	private rapierWorld!: RAPIER.World; // note non-null assertion
 	// ---
@@ -14,8 +14,8 @@ export class PhysicsSystem {
 	// ---
 
 	constructor(events: EventSystem, gameEntities: Map<EntityId, Entity>) {
+		super(gameEntities);
 		this.events = events;
-		this.gameEntities = gameEntities;
 
 		console.log("unawaited rapier init");
 		this.initRapier();

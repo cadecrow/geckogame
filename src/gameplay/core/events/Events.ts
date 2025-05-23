@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { GameMode } from "../../GameManager";
-import type { EntityId } from "../entity/Entity";
+import type { EntityId } from "../ecs/Entity";
 
 // Defines the registry of all game events.
 // Map event names to their payload types.

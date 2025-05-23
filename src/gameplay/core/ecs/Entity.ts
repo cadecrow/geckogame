@@ -1,7 +1,5 @@
 import type { EventSystem } from "../events/EventSystem";
-import type { AnimationComponent } from "../rendering/AnimationComponent";
-import type { PhysicsComponent } from "../physics/PhysicsComponent";
-import type { RenderingComponent } from "../rendering/RenderingComponent";
+import type { Component, ComponentConstructor } from "./Component";
 
 // entities take care of loading their models and storing properties related to themselves which other systems need.
 // physics and rendering systems are responsible for updating the entity
@@ -20,23 +18,30 @@ export type EntityId =
 	| "loading_screen";
 
 export class Entity {
-	public readonly events: EventSystem;
+	protected readonly events: EventSystem;
 	public readonly id: EntityId;
-	public readonly renderingComponent: RenderingComponent;
-	public readonly physicsComponent?: PhysicsComponent;
-	public readonly animationComponent?: AnimationComponent;
+	private components: Map<ComponentConstructor<Component>, Component> =
+		new Map();
 
-	constructor(
-		events: EventSystem,
-		id: EntityId,
-		renderingComponent: RenderingComponent,
-		physicsComponent?: PhysicsComponent,
-		animationComponent?: AnimationComponent
-	) {
+	constructor(events: EventSystem, id: EntityId) {
 		this.events = events;
 		this.id = id;
-		this.renderingComponent = renderingComponent;
-		this.physicsComponent = physicsComponent;
-		this.animationComponent = animationComponent;
+	}
+
+	protected addComponent<T extends Component>(component: T): T {
+		const ComponentClass = component.constructor as ComponentConstructor<T>;
+		this.components.set(ComponentClass, component);
+		return component;
+	}
+
+	protected removeComponent<T extends Component>(component: T): void {
+		const ComponentClass = component.constructor as ComponentConstructor<T>;
+		this.components.delete(ComponentClass);
+	}
+
+	public getComponent<T extends Component>(
+		componentClass: ComponentConstructor<T>
+	): T | undefined {
+		return this.components.get(componentClass) as T;
 	}
 }

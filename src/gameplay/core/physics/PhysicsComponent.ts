@@ -7,10 +7,10 @@ export interface IPhysicsEntity extends Entity {
 	colliders: RAPIER.Collider[];
 	initPhysics(): void; // is there a good way to make this generic? sometimes, there will be multiple colliders and rigid bodies for a given entity
 	updatePhysics(deltaTime: number): void;
-	disposePhysics(): void;
+	destroyPhysics(): void;
 }
 
-export class PhysicsComponent extends Component {
+export class PhysicsComponent extends Component<IPhysicsEntity> {
 	constructor(entity: IPhysicsEntity) {
 		super(entity);
 	}

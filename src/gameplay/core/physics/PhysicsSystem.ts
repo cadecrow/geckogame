@@ -2,6 +2,7 @@ import * as RAPIER from "@dimforge/rapier3d-compat";
 import { EventSystem } from "../events/EventSystem";
 import { Entity, type EntityId } from "../ecs/Entity";
 import { System } from "../ecs/System";
+import { PhysicsComponent } from "./PhysicsComponent";
 
 export const GRAVITY_ACCELERATION = 9.81;
 
@@ -35,7 +36,7 @@ export class PhysicsSystem extends System {
 			);
 
 			this.isInitialized = true;
-			this.events.emit(EVENT.PHYSICS_ENGINE_INITIALIZED, {});
+			this.events.emit("physics_engine_initialized", undefined);
 			console.log("Physics world created successfully");
 		} catch (error) {
 			console.error("Failed to initialize Rapier:", error);
@@ -45,10 +46,9 @@ export class PhysicsSystem extends System {
 	public destroy(): void {
 		if (!this.isInitialized) return;
 
-		for (const entity of this.gameEntities.values()) {
-			if (entity.hasPhysics) {
-				this.rapierWorld.removeCollider(entity.collider, false);
-				this.rapierWorld.removeRigidBody(entity.rigidBody);
+		for (const entity of this.entities.values()) {
+			const physicsComponent = entity.getComponent(PhysicsComponent);
+			if (physicsComponent) {
 				entity.destroyPhysics();
 			}
 		}

@@ -6,7 +6,7 @@ export type ComponentConstructor<
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 > = new (...args: any[]) => T;
 
-export abstract class Component<TEntity extends Entity = Entity> {
+export abstract class Component<TEntity extends Entity> {
 	public readonly entity: TEntity;
 
 	constructor(entity: TEntity) {

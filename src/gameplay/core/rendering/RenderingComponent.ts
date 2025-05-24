@@ -16,23 +16,8 @@ export interface IRenderableEntity extends Entity {
 	disposeRender(): void;
 }
 
-export class RenderingComponent extends Component {
-	public readonly group: THREE.Group;
-	// ---
-	public readonly initRender: () => void;
-	public readonly updateRender: (deltaTime: number) => void;
-	public readonly disposeRender: () => void;
-
-	constructor(
-		entity: IRenderableEntity,
-		initRender: () => void,
-		updateRender: (deltaTime: number) => void,
-		disposeRender: () => void
-	) {
+export class RenderingComponent extends Component<IRenderableEntity> {
+	constructor(entity: IRenderableEntity) {
 		super(entity);
-		this.group = new THREE.Group();
-		this.initRender = initRender;
-		this.updateRender = updateRender;
-		this.disposeRender = disposeRender;
 	}
 }

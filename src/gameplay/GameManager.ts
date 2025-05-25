@@ -1,12 +1,13 @@
 import { UIManager } from "./ui/UIManager";
 import { RenderingSystem } from "./core/rendering/RenderingSystem";
-import { EVENT, EventSystem } from "./core/events/EventSystem";
+import { EventBus } from "./core/events/EventBus";
 import { PhysicsSystem } from "./core/physics/PhysicsSystem";
-import { Entity, type EntityId } from "./core/ecs/Entity";
+import { Entity, type EntityId } from "./core/ec-s/Entity";
 import { LandingPlane } from "./entities/LandingPlane";
 import { Player } from "./entities/Player";
 import { Starship } from "./entities/Starship";
 import { Controller } from "./controller/Controller";
+import { EntityManager } from "./core/ec-s/EntityManager";
 
 // difference between a manager and a system?
 // manager will have some of its own logic that controls its children
@@ -24,32 +25,28 @@ export class GameManager {
 	// parent DOM element
 	private readonly container: HTMLElement;
 	// abstracted managers
-	private readonly events: EventSystem;
+	private readonly entityManager: EntityManager;
+	private readonly events: EventBus;
 	private readonly controller: Controller;
 	private readonly rendering: RenderingSystem;
 	private readonly physics: PhysicsSystem;
 	private readonly ui: UIManager; // non three rendered UI elements
 	// ---
 	public gameMode: GameMode = "loading";
-	private readonly entities: Map<EntityId, Entity> = new Map();
 	// ---
 
 	constructor(container: HTMLElement) {
 		this.container = container;
-		this.events = new EventSystem();
+		this.events = new EventBus();
+		this.entityManager = new EntityManager();
 		this.ui = new UIManager(this.events, this.container);
-		this.physics = new PhysicsSystem(this.events, this.entities);
+		this.physics = new PhysicsSystem(this.events, this.entityManager);
 		this.rendering = new RenderingSystem(
 			this.container,
 			this.events,
 			this.entities
 		);
 		this.controller = new Controller(this.events, this.gameMode);
-
-		// Instantiate Entities
-		// this.entities.set("player", new Player(this.events));
-		// this.entities.set("starship", new Starship(this.events));
-		this.entities.set("landing_plane", new LandingPlane());
 
 		this.initEventListeners();
 	}

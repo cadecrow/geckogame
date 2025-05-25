@@ -1,4 +1,4 @@
-import { EventSystem, EVENT } from "../core/events/EventSystem";
+import { EventSystem, EVENT } from "../core/events/EventBus";
 import type { GameMode } from "../GameManager";
 
 const UI_ELEMENTS = {

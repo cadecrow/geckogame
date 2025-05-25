@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { GameMode } from "../../GameManager";
-import type { EntityId } from "../ecs/Entity";
+import type { EntityId } from "../ec-s/Entity";
 
 // Defines the registry of all game events.
 // Map event names to their payload types.
@@ -22,8 +22,9 @@ export interface EventRegistry {
 	};
 
 	// --- INTERNAL EVENT REQUESTS ---
-	entity_render_init_request: { entityId: EntityId };
-	entity_physics_init_request: { entityId: EntityId };
+	// convention: <requester>_request_<description>_<target>
+	entity_request_init_physics: { entityId: EntityId };
+	entity_request_init_rendering: { entityId: EntityId };
 
 	// --- INTERNAL STATUS EVENTS ---
 	entity_model_load_error: { entityId: EntityId; error: Error };

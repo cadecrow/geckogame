@@ -1,20 +1,21 @@
 import * as RAPIER from "@dimforge/rapier3d-compat";
-import { EventSystem } from "../events/EventSystem";
-import { Entity, type EntityId } from "../ecs/Entity";
-import { System } from "../ecs/System";
-import { PhysicsComponent } from "./PhysicsComponent";
+import { EventBus } from "../events/EventBus";
+import { System } from "../ec-s/System";
+import { type IPhysicsEntity, PhysicsComponent } from "./PhysicsComponent";
+import type { EntityManager } from "../ec-s/EntityManager";
 
 export const GRAVITY_ACCELERATION = 9.81;
 
 export class PhysicsSystem extends System {
-	private readonly events: EventSystem;
+	private readonly events: EventBus;
 	// ---
 	private rapierWorld!: RAPIER.World; // note non-null assertion
 	// ---
 	private isInitialized = false;
+	private cachedEntities: IPhysicsEntity[] | null = null; // null when cache invalid
 	// ---
 
-	constructor(events: EventSystem, gameEntities: Map<EntityId, Entity>) {
+	constructor(events: EventBus, gameEntities: EntityManager) {
 		super(gameEntities);
 		this.events = events;
 
@@ -43,20 +44,28 @@ export class PhysicsSystem extends System {
 		}
 	}
 
-	public destroy(): void {
+	public dispose(): void {
 		if (!this.isInitialized) return;
 
-		for (const entity of this.entities.values()) {
-			const physicsComponent = entity.getComponent(PhysicsComponent);
-			if (physicsComponent) {
-				entity.destroyPhysics();
+		if (this.cachedEntities) {
+			for (const entity of this.cachedEntities) {
+				entity.disposePhysics();
 			}
+		}
+		for (const entity of this.entityManager.getEntitiesHavingComponent<
+			PhysicsComponent,
+			IPhysicsEntity
+		>(PhysicsComponent)) {
+			entity.disposePhysics();
 		}
 	}
 
 	// --- core init ---
 
 	private initListeners(): void {
+		this.events.on("entity_request_init_physics", () => {
+			this.cachedEntities = null;
+		});
 		// this.events.on(
 		// EVENT.UPDATE_PHYSICS_ORIENTATION_COMMAND,
 		// this.handleUpdatePhysicsOrientationCommand.bind(this)
@@ -68,7 +77,10 @@ export class PhysicsSystem extends System {
 	public update(deltaTime: number): void {
 		if (!this.isInitialized) return;
 		this.rapierWorld.step();
-		for (const entity of this.gameEntities.values()) {
+		for (const entity of this.entityManager.getEntitiesHavingComponent<
+			PhysicsComponent,
+			IPhysicsEntity
+		>(PhysicsComponent)) {
 			if (entity.hasPhysics) {
 				entity.updatePhysics(this.rapierWorld);
 			}

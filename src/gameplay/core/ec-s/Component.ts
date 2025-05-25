@@ -1,10 +1,15 @@
 import type { Entity } from "./Entity";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyComponentConstructor = ComponentConstructor<Component<any>, any>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyComponent = Component<any>;
+
 export type ComponentConstructor<
-	T extends Component<TEntity>,
+	TComponent extends Component<TEntity>,
 	TEntity extends Entity
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-> = new (...args: any[]) => T;
+> = new (...args: any[]) => TComponent;
 
 export abstract class Component<TEntity extends Entity> {
 	public readonly entity: TEntity;

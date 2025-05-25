@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import * as RAPIER from "@dimforge/rapier3d-compat";
-import { Entity, type EntityId } from "../core/ecs/Entity";
+import { Entity, type EntityId } from "../core/ec-s/Entity";
 import {
 	createModelLoader,
 	tryAsyncLoadModel,
@@ -8,7 +8,7 @@ import {
 	type EntityAnimationMap,
 } from "../core/utils/modelLoaderUtils";
 import type { AnimationResolver } from "../core/utils/modelLoaderUtils";
-import { EVENT, EventSystem } from "../core/events/EventSystem";
+import { EVENT, EventSystem } from "../core/events/EventBus";
 import { QuaternionVisualizer } from "./utilObjects/QuaternionVisualizer";
 
 // --- Definitions for entity ---

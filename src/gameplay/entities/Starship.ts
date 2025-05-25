@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import * as RAPIER from "@dimforge/rapier3d-compat";
-import { Entity, type EntityAnimationMap, type EntityId } from "../core/ecs/Entity";
+import { Entity, type EntityAnimationMap, type EntityId } from "../core/ec-s/Entity";
 import {
 	createModelLoader,
 	tryAsyncLoadModel,
@@ -8,7 +8,7 @@ import {
 } from "./loaderHelpers";
 import type { AnimationResolver } from "./loaderHelpers";
 import { getTrimeshBodyAndColliders } from "../core/utils/physicsUtils";
-import { EVENT, EventSystem } from "../core/events/EventSystem";
+import { EVENT, EventSystem } from "../core/events/EventBus";
 
 // Definitions for entity
 const MODEL_PATH: string = "/models/ships/starship.glb";

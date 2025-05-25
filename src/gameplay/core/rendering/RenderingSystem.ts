@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { EventSystem, EVENT } from "../events/EventSystem";
-import type { EventPayload } from "../events/EventSystem";
-import type { EntityId } from "../ecs/Entity";
-import { Entity } from "../ecs/Entity";
+import { EventSystem, EVENT } from "../events/EventBus";
+import type { EventPayload } from "../events/EventBus";
+import type { EntityId } from "../ec-s/Entity";
+import { Entity } from "../ec-s/Entity";
 import {
 	initCamera,
 	initDirectionalLight,

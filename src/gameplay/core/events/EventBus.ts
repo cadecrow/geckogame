@@ -8,7 +8,7 @@ const LOG_EVENTS =
 	import.meta.env.VITE_RUNTIME_ENV === "TEST" ||
 	false;
 
-export class EventSystem {
+export class EventBus {
 	private listeners: Map<
 		keyof EventRegistry,
 		Set<EventCallback<keyof EventRegistry>>

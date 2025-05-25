@@ -1,54 +1,26 @@
-# React + TypeScript + Vite
+# GeckoGame
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Hybrid EC & ECS Engine (EC/S) with Event Bus
+The engine for this game lives in between an Entity-Component (EC) Architecture and an Entity-Component-System (ECS) Architecture. EC is a bit OOP like, and ECS is Data-Oriented.
 
-Currently, two official plugins are available:
+Creating a hybrid EC/ECS (EC/S) Architecture that can later be morphed into ECS is a good practice for creating a game that can grow over time. The EC like architecture is good to prevent premature optimization and abstraction while the game is small. Then, when the game expands, its easier to refactor over time if a pure ECS Architecture is necessary to manage the scope and complexity of a larger game. The initial hybrid EC/ECS modules can be progressively refactored into a pure ECS architecture over iterations while new modules with pure ECS implementations are added, rather than requiring a full refactor of the EC system into ECS before new pure ECS modules can be implemented.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### EC Architecture
 
-## Expanding the ESLint configuration
+### ECS Architecture
+Entities = A collection of components that represent some entity.
+Components = Arrays of data representing some component.
+Systems = Perform logic and updates on entities based on the components that are present.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Note: Entities and Components only store data. They are not meant to store logic.
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+### Hybrid System (EC/S)
+Systems and Components require Entities to implement certain primitive methods that will be executed by the systems.
+The common primitive methods are:
+- initComponent() => void
+- updateComponent(deltaTime) => void
+- destroyComponent() => void
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Entities will implement their custom logic for these primitives. For example, an entity may be stationary but have a body and colliders, so it needs to be included in the Physics System. StationaryEntity will have a physics component, but it does not need to implement any logic in updatePhysics(deltaTime), so it can immediately return. Now, a dynamic entity, like a Ball within a scene, will need a body and colliders, but it will also need to include logic to update it's physics on every frame. The exact logic will be left to be implemented within the primitive updatePhysics(deltaTime) method in BallEntity. The Physics System will trigger execution of the primitive method updatePhysics() for the BallEntity and all other entities.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+As more and more entities are added to the game, patterns within their attached components and custom implementations of the primitive methods will begin to emerge. As these patterns emerge, it will begin to make sense to abstract specific methods into the systems for handling of entities with specific components and combinations of components. Systems can evolve over iterations where they are still executing primitives for older entities alongside execution of the specific methods for newly added entities with specific components and no primitive methods.

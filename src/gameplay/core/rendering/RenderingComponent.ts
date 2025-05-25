@@ -1,6 +1,7 @@
 import * as THREE from "three";
-import { Component } from "../ecs/Component";
-import type { Entity } from "../ecs/Entity";
+import { Component } from "../ec-s/Component";
+import type { Entity } from "../ec-s/Entity";
+
 // even if entities are static and have no animations,
 // they still need an updateRender method
 // this is because the rendering manager needs to call updateRender on all entities
@@ -11,9 +12,9 @@ import type { Entity } from "../ecs/Entity";
 export interface IRenderableEntity extends Entity {
 	group: THREE.Group; // Example: If the component needs to manipulate the entity's root group
 	// ---
-	initRender(): void;
-	updateRender(deltaTime: number): void;
-	disposeRender(): void;
+	initRendering(): void;
+	updateRendering(deltaTime: number): void;
+	disponseRendering(): void;
 }
 
 export class RenderingComponent extends Component<IRenderableEntity> {

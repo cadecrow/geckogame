@@ -1,9 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { EventSystem, EVENT } from "../events/EventBus";
-import type { EventPayload } from "../events/EventBus";
-import type { EntityId } from "../ec-s/Entity";
-import { Entity } from "../ec-s/Entity";
+import type { EventBus } from "../events/EventBus";
 import {
 	initCamera,
 	initDirectionalLight,
@@ -11,33 +8,39 @@ import {
 	initRenderer,
 	initScene,
 	styleCanvas,
+	initPointLight,
+	initAmbientLight,
 } from "../utils/sceneInitializers";
-import { initPointLight } from "../utils/sceneInitializers";
-import { initAmbientLight } from "../utils/sceneInitializers";
+import { System } from "../ec-s/System";
+import type { EntityManager } from "../ec-s/EntityManager";
 import { hasDisposeMethod } from "../../../Typeguards";
+import {
+	RenderingComponent,
+	type IRenderableEntity,
+} from "./RenderingComponent";
+import type { EntityId } from "../ec-s/Entity";
 
-export class RenderingSystem {
+export class RenderingSystem extends System {
 	private readonly container: HTMLElement;
-	private readonly events: EventSystem;
-	// ---
-	private readonly gameEntities: Map<EntityId, Entity>;
+	private readonly events: EventBus;
 	// ---
 	private scene: THREE.Scene;
 	private camera: THREE.PerspectiveCamera;
 	private renderer: THREE.WebGLRenderer;
+	private cachedEntities: IRenderableEntity[] | null = null; // null when cache invalid
 	// ---
 	public clock: THREE.Clock;
 	public orbitControls: OrbitControls;
 
 	constructor(
 		container: HTMLElement,
-		events: EventSystem,
-		gameEntities: Map<EntityId, Entity>
+		events: EventBus,
+		gameEntities: EntityManager
 	) {
-		window.addEventListener("resize", this.handleResize);
+		super(gameEntities);
 		this.container = container;
 		this.events = events;
-		this.gameEntities = gameEntities;
+		window.addEventListener("resize", this.handleResize);
 
 		this.scene = initScene();
 		this.scene.add(initPointLight());
@@ -59,15 +62,76 @@ export class RenderingSystem {
 		this.initEventListeners();
 	}
 
-	public destroy(): void {
+	public update(): void {
+		this.ensureValidCache();
+		for (const entity in this.cachedEntities) {
+			entity.updateRendering();
+		}
+	}
+
+	public dispose(): void {
 		console.log("Destorying RenderingSystem");
 		window.removeEventListener("resize", this.handleResize);
 
-		for (const entity of this.gameEntities.values()) {
-			entity.destroyRender();
+		this.populateCache();
+		for (const entity in this.cachedEntities) {
+			entity.disposeRendering();
 		}
 
-		// Clean up all entities in the scene
+		// Clean up all objects in the scene
+		this.disposeThreeSceneObjects();
+
+		this.renderer.dispose();
+		this.orbitControls.dispose();
+	}
+
+	// --- core init ---
+	private initEventListeners(): void {
+		this.events.on("entity_request_init_rendering", (payload) => {
+			this.cachedEntities = null;
+			this.initEntityRendering(payload.entityId);
+		});
+	}
+
+	// --- event handlers ---
+	private handleResize = (): void => {
+		if (!this.container) return;
+
+		const width = this.container.clientWidth;
+		const height = this.container.clientHeight;
+
+		this.renderer.setSize(width, height);
+		this.camera.aspect = width / height;
+		this.camera.updateProjectionMatrix();
+	};
+
+	// --- HELPERS ---
+	private ensureValidCache() {
+		if (!this.cachedEntities) {
+			this.populateCache();
+		}
+	}
+
+	private populateCache() {
+		this.cachedEntities = this.entityManager.getEntitiesHavingComponent<
+			RenderingComponent,
+			IRenderableEntity
+		>(RenderingComponent);
+	}
+
+	private initEntityRendering(entityId: EntityId) {
+		const entity = this.entityManager.getEntity(entityId) as IRenderableEntity;
+		if (
+			entity &&
+			entity.hasComponent<RenderingComponent, IRenderableEntity>(
+				RenderingComponent
+			)
+		) {
+			entity.initRendering();
+		}
+	}
+
+	private disposeThreeSceneObjects() {
 		while (this.scene.children.length > 0) {
 			const object = this.scene.children.pop();
 			if (object) {
@@ -85,42 +149,5 @@ export class RenderingSystem {
 				}
 			}
 		}
-		this.renderer.dispose();
-
-		// Clean up controls
-		this.orbitControls.dispose();
-	}
-
-	// --- core init ---
-	private initEventListeners(): void {
-		this.events.on(
-			EVENT.ENTITY_RENDER_INIT_REQUEST,
-			(payload: EventPayload<typeof EVENT.ENTITY_RENDER_INIT_REQUEST>) => {
-				const entity = this.gameEntities.get(payload.entityId);
-				if (entity) {
-					entity.initRender(this.scene, this.renderer, this.camera);
-				}
-			}
-		);
-	}
-
-	// --- event handlers ---
-	private handleResize = (): void => {
-		if (!this.container) return;
-
-		const width = this.container.clientWidth;
-		const height = this.container.clientHeight;
-
-		this.renderer.setSize(width, height);
-		this.camera.aspect = width / height;
-		this.camera.updateProjectionMatrix();
-	};
-
-	public update(deltaTime: number): void {
-		for (const entity of this.gameEntities.values()) {
-			entity.updateRender(deltaTime);
-		}
-
-		this.renderer.render(this.scene, this.camera);
 	}
 }

@@ -10,8 +10,7 @@ import type { Entity } from "../ec-s/Entity";
 // @todofun - fun - try some actual perf benchmarks to compare conditional checks vs immediately returning in update function
 
 export interface IRenderableEntity extends Entity {
-	group: THREE.Group; // Example: If the component needs to manipulate the entity's root group
-	// ---
+	group: THREE.Group;
 	initRendering(): void;
 	updateRendering(deltaTime: number): void;
 	disponseRendering(): void;

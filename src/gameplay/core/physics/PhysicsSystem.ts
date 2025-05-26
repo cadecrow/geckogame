@@ -44,6 +44,20 @@ export class PhysicsSystem extends System {
 		}
 	}
 
+	public update(deltaTime: number): void {
+		if (!this.isInitialized) return;
+		this.rapierWorld.step();
+		if (!this.cachedEntities) {
+			this.cachedEntities = this.entityManager.getEntitiesHavingComponent<
+				PhysicsComponent,
+				IPhysicsEntity
+			>(PhysicsComponent);
+		}
+		for (const entity of this.cachedEntities) {
+			entity.updatePhysics(deltaTime);
+		}
+	}
+
 	public dispose(): void {
 		if (!this.isInitialized) return;
 
@@ -51,12 +65,13 @@ export class PhysicsSystem extends System {
 			for (const entity of this.cachedEntities) {
 				entity.disposePhysics();
 			}
-		}
-		for (const entity of this.entityManager.getEntitiesHavingComponent<
-			PhysicsComponent,
-			IPhysicsEntity
-		>(PhysicsComponent)) {
-			entity.disposePhysics();
+		} else {
+			for (const entity of this.entityManager.getEntitiesHavingComponent<
+				PhysicsComponent,
+				IPhysicsEntity
+			>(PhysicsComponent)) {
+				entity.disposePhysics();
+			}
 		}
 	}
 
@@ -73,17 +88,4 @@ export class PhysicsSystem extends System {
 	}
 
 	// --- Event Handlers ---
-
-	public update(deltaTime: number): void {
-		if (!this.isInitialized) return;
-		this.rapierWorld.step();
-		for (const entity of this.entityManager.getEntitiesHavingComponent<
-			PhysicsComponent,
-			IPhysicsEntity
-		>(PhysicsComponent)) {
-			if (entity.hasPhysics) {
-				entity.updatePhysics(this.rapierWorld);
-			}
-		}
-	}
 }

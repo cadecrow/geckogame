@@ -13,7 +13,7 @@ export interface IRenderableEntity extends Entity {
 	group: THREE.Group;
 	initRendering(): void;
 	updateRendering(deltaTime: number): void;
-	disponseRendering(): void;
+	disposeRendering(): void;
 }
 
 export class RenderingComponent extends Component<IRenderableEntity> {

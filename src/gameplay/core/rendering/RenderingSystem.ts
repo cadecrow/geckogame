@@ -32,12 +32,8 @@ export class RenderingSystem extends System {
 	public clock: THREE.Clock;
 	public orbitControls: OrbitControls;
 
-	constructor(
-		container: HTMLElement,
-		events: EventBus,
-		gameEntities: EntityManager
-	) {
-		super(gameEntities);
+	constructor(container: HTMLElement, events: EventBus, eM: EntityManager) {
+		super(eM);
 		this.container = container;
 		this.events = events;
 		window.addEventListener("resize", this.handleResize);
@@ -62,10 +58,10 @@ export class RenderingSystem extends System {
 		this.initEventListeners();
 	}
 
-	public update(): void {
+	public update(deltaTime: number): void {
 		this.ensureValidCache();
-		for (const entity in this.cachedEntities) {
-			entity.updateRendering();
+		for (const entity in this.cachedEntities as IRenderableEntity[]) {
+			(entity as unknown as IRenderableEntity).updateRendering(deltaTime);
 		}
 	}
 
@@ -74,8 +70,9 @@ export class RenderingSystem extends System {
 		window.removeEventListener("resize", this.handleResize);
 
 		this.populateCache();
-		for (const entity in this.cachedEntities) {
-			entity.disposeRendering();
+		for (const entity in this.cachedEntities as IRenderableEntity[]) {
+			// etf typescript compiler... why does it think entity is string?
+			(entity as unknown as IRenderableEntity).disposeRendering();
 		}
 
 		// Clean up all objects in the scene

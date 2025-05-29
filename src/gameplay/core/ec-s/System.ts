@@ -6,8 +6,4 @@ export abstract class System {
 	constructor(entityManager: EntityManager) {
 		this.entityManager = entityManager;
 	}
-	// Optional: common methods that derived systems can override
-	// init?(): void;
-	// update?(deltaTime: number): void;
-	// dispose?(): void;
 }

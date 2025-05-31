@@ -1,0 +1,46 @@
+@media (prefers-reduced-motion: no-preference) {
+	.spin {
+		animation: thingSpin infinite 20s linear;
+	}
+}
+
+.mirrorVertical {
+	transform: scaleX(-1)
+}
+
+.spin {
+	animation-iteration-count: 0;
+}
+
+.hoverShadow {
+	will-change: filter;
+	transition: filter 300ms;
+}
+.hoverShadow:hover {
+	filter: drop-shadow(0 0 2em #646cffaa);
+}
+
+.colorVar {
+	--hover-color: #646cffaa;
+}
+/* Example jsx usage:
+<div className={`${styles.hoverShadow} ${styles.colorVar}`} style={{ '--hover-color': #aaaaaa }} />
+ */
+.hoverShadow.colorVar:hover {
+	filter: drop-shadow(0 0 2em var(--hover-color));
+}
+
+@keyframes thingSpin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* @media (prefers-reduced-motion: no-preference) {
+	a:nth-of-type(2) .spin {
+		animation: thingSpin infinite 20s linear;
+	}
+} */

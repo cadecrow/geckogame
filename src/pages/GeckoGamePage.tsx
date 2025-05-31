@@ -1,8 +1,7 @@
 import { useRef, useEffect } from "react";
-import { GameManager } from "./gameplay/GameManager";
-import "./App.css";
+import { GameManager } from "@/src/gameplay/GameManager";
 
-function App() {
+export default function GeckoGamePage() {
 	const mountRef = useRef<HTMLDivElement>(null);
 	const geckoGameRef = useRef<GameManager>(null);
 
@@ -23,8 +22,9 @@ function App() {
 			}
 		};
 	}, []); // Empty dependency array ensures this effect runs only once on mount and cleans up on unmount
+
 	return (
-		<main
+		<div
 			style={{
 				width: "100vw",
 				height: "100vh",
@@ -39,8 +39,6 @@ function App() {
 					position: "relative",
 				}}
 			/>
-		</main>
+		</div>
 	);
 }
-
-export default App;

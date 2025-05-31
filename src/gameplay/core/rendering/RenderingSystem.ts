@@ -13,7 +13,7 @@ import {
 } from "../utils/sceneInitializers";
 import { System } from "../ec-s/System";
 import type { EntityManager } from "../ec-s/EntityManager";
-import { hasDisposeMethod } from "../../../Typeguards";
+import { hasDisposeMethod } from "../../../_utils/Typeguards";
 import {
 	RenderingComponent,
 	type IRenderableEntity,

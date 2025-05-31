@@ -1,0 +1,3 @@
+.rotatingElement {
+	transform-origin: center; /* Ensure rotation is around the center */
+}

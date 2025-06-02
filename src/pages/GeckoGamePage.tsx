@@ -131,103 +131,118 @@ export default function GeckoGamePage() {
 						pointerEvents: lobbyFadingOut ? "none" : "auto",
 					}}
 				>
+					{/* text container */}
 					<div
 						style={{
-							color: "white",
-							fontSize: "32px",
-							fontWeight: "bold",
-							marginBottom: "16px",
-							textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
-						}}
-					>
-						Gecko Game
-					</div>
-					<div
-						style={{
-							color: "rgba(255,255,255,0.9)",
-							textAlign: "center",
-							marginBottom: "24px",
-							textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-							fontSize: "20px",
-						}}
-					>
-						Ready to begin your adventure?
-					</div>
-					<div
-						style={{
-							color: "rgba(255,255,255,0.9)",
-							textAlign: "center",
-							marginBottom: "4px",
-							textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-							fontSize: "16px",
+							filter: "drop-shadow(0 0 8em #646cffaa)",
+							// backgroundColor: "hsla(0, 0%, 0%, 0.4)",
+							display: "flex",
+							flexDirection: "column",
+							alignItems: "center",
+							justifyContent: "center",
+							padding: "12px",
 							width: "40%",
 						}}
 					>
-						{"This game is still under development!"}
-					</div>
-					<div
-						style={{
-							color: "rgba(255,255,255,0.9)",
-							textAlign: "center",
-							textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-							fontSize: "12px",
-							width: "40%",
-						}}
-					>
-						{
-							"(In the final version of this game, the robot will be able to walk around and stick to the walls of the ship, just like a gecko! There will be special locations on the ship that the robot will need to reach and scan to win the game.)"
-						}
-					</div>
-
-					<div
-						style={{
-							color: "rgba(255,255,255,0.9)",
-							textAlign: "center",
-							marginTop: "8px",
-							marginBottom: "32px",
-							textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-							fontSize: "16px",
-						}}
-					>
-						{"This game is not compatible with mobile devices."}
-						<br />
-						{"It must be played on a desktop."}
-					</div>
-
-					{/* Start Game Button */}
-					<button
-						onClick={handleStartGame}
-						style={{
-							padding: "12px 24px",
-							backgroundColor: "hsla(0, 0%, 35%, 0.7)",
-							color: "white",
-							borderRadius: "5px",
-							fontFamily: "Arial, sans-serif",
-							fontSize: "16px",
-							fontWeight: "bold",
-							border: "1px solid rgba(255, 255, 255, 0.3)",
-							cursor: "pointer",
-							zIndex: "1001",
-							opacity: startButtonFadingOut ? 0 : 1,
-							transition: "opacity 1.5s ease, transform 0.2s ease",
-							transform: "scale(1)",
-							textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-						}}
-						onMouseEnter={(e) => {
-							if (!startButtonFadingOut) {
-								e.currentTarget.style.transform = "scale(1.05)";
-								e.currentTarget.style.backgroundColor = "hsla(0, 0%, 45%, 0.8)";
+						<div
+							style={{
+								color: "white",
+								fontSize: "32px",
+								fontWeight: "bold",
+								marginBottom: "16px",
+								textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
+							}}
+						>
+							Gecko Game
+						</div>
+						<div
+							style={{
+								color: "rgba(255,255,255,0.9)",
+								textAlign: "center",
+								marginBottom: "24px",
+								textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+								fontSize: "20px",
+							}}
+						>
+							Ready to begin your adventure?
+						</div>
+						<div
+							style={{
+								color: "rgba(255,255,255,0.9)",
+								textAlign: "center",
+								marginBottom: "4px",
+								textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+								fontSize: "28px",
+							}}
+						>
+							{"This game is still under development!"}
+						</div>
+						<div
+							style={{
+								color: "rgba(255,255,255,0.9)",
+								textAlign: "center",
+								textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+								fontSize: "12px",
+								width: "40%",
+							}}
+						>
+							{
+								"(In the final version of this game, the robot will be able to walk around and stick to the walls of the ship, just like a gecko! There will be special locations on the ship that the robot will need to reach and scan to win the game.)"
 							}
-						}}
-						onMouseLeave={(e) => {
-							if (!startButtonFadingOut) {
-								e.currentTarget.style.transform = "scale(1)";
-								e.currentTarget.style.backgroundColor = "hsla(0, 0%, 35%, 0.7)";
-							}
-						}}
-					>
-						Start Game
-					</button>
+						</div>
+
+						<div
+							style={{
+								color: "rgba(255,255,255,0.9)",
+								textAlign: "center",
+								marginTop: "8px",
+								marginBottom: "32px",
+								textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+								fontSize: "16px",
+							}}
+						>
+							{"This game is not compatible with mobile devices."}
+							<br />
+							{"It must be played on a desktop."}
+						</div>
+
+						{/* Start Game Button */}
+						<button
+							onClick={handleStartGame}
+							style={{
+								padding: "12px 24px",
+								backgroundColor: "hsla(0, 0%, 35%, 0.7)",
+								color: "white",
+								borderRadius: "5px",
+								fontFamily: "Arial, sans-serif",
+								fontSize: "16px",
+								fontWeight: "bold",
+								border: "1px solid rgba(255, 255, 255, 0.3)",
+								cursor: "pointer",
+								zIndex: "1001",
+								opacity: startButtonFadingOut ? 0 : 1,
+								transition: "opacity 1.5s ease, transform 0.2s ease",
+								transform: "scale(1)",
+								textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+							}}
+							onMouseEnter={(e) => {
+								if (!startButtonFadingOut) {
+									e.currentTarget.style.transform = "scale(1.05)";
+									e.currentTarget.style.backgroundColor =
+										"hsla(0, 0%, 45%, 0.8)";
+								}
+							}}
+							onMouseLeave={(e) => {
+								if (!startButtonFadingOut) {
+									e.currentTarget.style.transform = "scale(1)";
+									e.currentTarget.style.backgroundColor =
+										"hsla(0, 0%, 35%, 0.7)";
+								}
+							}}
+						>
+							Start Game
+						</button>
+					</div>
 				</div>
 			)}
 

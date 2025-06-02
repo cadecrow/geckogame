@@ -4,7 +4,8 @@ import type { GameMode } from "../GameManager";
 
 type UI_ELEMENT =
 	| "loading"
-	| "keyboard_helper"
+	| "keyboard_helper_question_mark"
+	| "keyboard_helper_expanded_content"
 	| "orientation_helper"
 	| "forward_controls";
 
@@ -34,7 +35,9 @@ export class UIManager {
 
 	private init(): void {
 		// this.addUiElement(UI_ELEMENTS.LOADING, this.initLoadingUI());
-		this.addUiElement("keyboard_helper", this.initKeyboardHelper());
+		const [questionMark, expandedContent] = this.initKeyboardHelper();
+		this.addUiElement("keyboard_helper_question_mark", questionMark);
+		this.addUiElement("keyboard_helper_expanded_content", expandedContent);
 		this.addUiElement("orientation_helper", this.initOrientationHelper());
 		this.addUiElement(
 			"forward_controls",
@@ -155,70 +158,141 @@ export class UIManager {
 	}
 
 	// --- keyboard helper
-	private initKeyboardHelper(): HTMLElement {
-		const keyboardHelper = document.createElement("div");
-		keyboardHelper.style.position = "absolute";
-		keyboardHelper.style.zIndex = "1000";
-		keyboardHelper.style.bottom = "12px";
-		keyboardHelper.style.left = "12px";
-		keyboardHelper.style.color = "white";
-		keyboardHelper.style.background = "oklch(0.2 0.007 0)";
-		keyboardHelper.style.padding = "12px";
-		keyboardHelper.style.borderRadius = "6px";
+	private initKeyboardHelper(): [HTMLElement, HTMLElement] {
+		// Question mark element
+		const questionMark = document.createElement("div");
+		questionMark.style.position = "absolute";
+		questionMark.style.zIndex = "1000";
+		questionMark.style.bottom = "12px";
+		questionMark.style.left = "12px";
+		questionMark.style.color = "white";
+		questionMark.style.background = "oklch(0.3 0.007 0)";
+		questionMark.style.padding = "12px";
+		questionMark.style.borderRadius = "6px";
+		questionMark.style.fontSize = "18px";
+		questionMark.style.fontWeight = "bold";
+		questionMark.style.textAlign = "center";
+		questionMark.style.transition = "opacity 0.3s ease";
+		questionMark.style.opacity = "1";
+		questionMark.style.cursor = "pointer";
+		questionMark.textContent = "?";
 
+		// --- Expanded content elements ---
+		const expandedContent = document.createElement("div");
+		expandedContent.style.position = "absolute";
+		expandedContent.style.zIndex = "1000";
+		expandedContent.style.bottom = "12px";
+		expandedContent.style.left = "12px";
+		expandedContent.style.color = "white";
+		expandedContent.style.background = "oklch(0.3 0.007 0)";
+		expandedContent.style.padding = "12px";
+		expandedContent.style.borderRadius = "6px";
+		expandedContent.style.fontSize = "14px";
+		expandedContent.style.fontWeight = "normal";
+		expandedContent.style.textAlign = "left";
+		expandedContent.style.transition = "opacity 0.3s ease";
+		expandedContent.style.opacity = "0";
+		expandedContent.style.pointerEvents = "none";
+		expandedContent.style.marginRight = "12px";
+
+		// --- Group 1 ---
 		const moveText = document.createTextNode("Move: ");
-		keyboardHelper.appendChild(moveText);
 
 		const wasdKbd = document.createElement("kbd");
 		wasdKbd.textContent = "WASD";
-		wasdKbd.style.backgroundColor = "var(--accent-foreground)";
-		wasdKbd.style.borderRadius = "0.375rem";
-		wasdKbd.style.padding = "0.5rem";
+		wasdKbd.style.backgroundColor = "oklch(0.2 0.007 0)";
+		wasdKbd.style.borderRadius = "12px";
+		wasdKbd.style.padding = "8px";
 		wasdKbd.style.border = "1px solid black";
-		keyboardHelper.appendChild(wasdKbd);
 
 		const orText = document.createTextNode(" or ");
-		keyboardHelper.appendChild(orText);
 
 		const arrowsKbd = document.createElement("kbd");
 		arrowsKbd.textContent = "Arrows";
-		arrowsKbd.style.backgroundColor = "var(--accent-foreground)";
-		arrowsKbd.style.borderRadius = "0.375rem";
-		arrowsKbd.style.padding = "0.5rem";
+		arrowsKbd.style.backgroundColor = "oklch(0.2 0.007 0)";
+		arrowsKbd.style.borderRadius = "12px";
+		arrowsKbd.style.padding = "8px";
 		arrowsKbd.style.border = "1px solid black";
-		keyboardHelper.appendChild(arrowsKbd);
 
-		const separator1 = document.createTextNode(" | ");
-		keyboardHelper.appendChild(separator1);
+		const kbds = document.createElement("div");
+		kbds.style.display = "flex";
+		kbds.style.alignItems = "center";
+		kbds.style.gap = "2px";
+		kbds.appendChild(wasdKbd);
+		kbds.appendChild(orText);
+		kbds.appendChild(arrowsKbd);
+
+		const group1 = document.createElement("div");
+		group1.style.display = "flex";
+		group1.style.justifyContent = "space-between";
+		group1.style.alignItems = "center";
+		group1.style.gap = "4px";
+		group1.appendChild(moveText);
+		group1.appendChild(kbds);
+
+		// --- Group 2 ---
+		const upDownText = document.createTextNode("Move Up / Down: ");
 
 		const spaceKbd = document.createElement("kbd");
-		spaceKbd.textContent = "Space";
-		spaceKbd.style.backgroundColor = "var(--accent-foreground)";
-		spaceKbd.style.borderRadius = "0.375rem";
-		spaceKbd.style.padding = "0.5rem";
+		spaceKbd.textContent = "Space (+ Shift)";
+		spaceKbd.style.backgroundColor = "oklch(0.2 0.007 0)";
+		spaceKbd.style.borderRadius = "12px";
+		spaceKbd.style.padding = "8px";
 		spaceKbd.style.border = "1px solid black";
-		keyboardHelper.appendChild(spaceKbd);
 
-		const jumpText = document.createTextNode(" to jump ");
-		keyboardHelper.appendChild(jumpText);
+		const group2 = document.createElement("div");
+		group2.style.display = "flex";
+		group2.style.justifyContent = "space-between";
+		group2.style.alignItems = "center";
+		group2.style.gap = "4px";
+		group2.appendChild(upDownText);
+		group2.appendChild(spaceKbd);
 
-		const separator2 = document.createTextNode("| ");
-		keyboardHelper.appendChild(separator2);
+		// --- Group 3 ---
+		const geckoText = document.createTextNode(
+			"Enter Gecko mode (climb walls): "
+		);
 
 		const gKbd = document.createElement("kbd");
 		gKbd.textContent = "G";
-		gKbd.style.backgroundColor = "var(--accent-foreground)";
-		gKbd.style.borderRadius = "0.375rem";
-		gKbd.style.padding = "0.5rem";
+		gKbd.style.backgroundColor = "oklch(0.2 0.007 0)";
+		gKbd.style.borderRadius = "12px";
+		gKbd.style.padding = "8px";
 		gKbd.style.border = "1px solid black";
-		keyboardHelper.appendChild(gKbd);
 
-		const geckoText = document.createTextNode(
-			" to enter Gecko mode (climb walls)"
-		);
-		keyboardHelper.appendChild(geckoText);
+		const group3 = document.createElement("div");
+		group3.style.display = "flex";
+		group3.style.justifyContent = "space-between";
+		group3.style.alignItems = "center";
+		group3.style.gap = "4px";
+		group3.appendChild(geckoText);
+		group3.appendChild(gKbd);
 
-		return keyboardHelper;
+		// ---
+
+		const verticalGroups = document.createElement("div");
+		verticalGroups.style.display = "flex";
+		verticalGroups.style.flexDirection = "column";
+		verticalGroups.style.gap = "4px";
+
+		verticalGroups.appendChild(group1);
+		verticalGroups.appendChild(group2);
+		verticalGroups.appendChild(group3);
+
+		expandedContent.appendChild(verticalGroups);
+
+		// Hover event handlers
+		questionMark.onmouseenter = () => {
+			questionMark.style.opacity = "0";
+			expandedContent.style.opacity = "1";
+		};
+
+		questionMark.onmouseleave = () => {
+			questionMark.style.opacity = "1";
+			expandedContent.style.opacity = "0";
+		};
+
+		return [questionMark, expandedContent];
 	}
 
 	// --- forward controls

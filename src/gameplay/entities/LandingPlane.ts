@@ -60,14 +60,17 @@ export class LandingPlane
 					RAPIER.RigidBodyDesc.fixed().setTranslation(0, 0, 0)
 				);
 				this.rigidBodies.push(fallbackRb);
-				
+
 				const fallbackCollider = rapierWorld.createCollider(
 					RAPIER.ColliderDesc.cuboid(5, 0.1, 5) // A flat plane-like collider
 				);
 				this.colliders.push(fallbackCollider);
 				console.log("Created fallback physics for LandingPlane");
 			} catch (fallbackError) {
-				console.error("Failed to create fallback physics for LandingPlane:", fallbackError);
+				console.error(
+					"Failed to create fallback physics for LandingPlane:",
+					fallbackError
+				);
 			}
 		}
 	}
@@ -84,9 +87,6 @@ export class LandingPlane
 	public disposePhysics(rapierWorld: RAPIER.World): void {
 		for (const rb of this.rigidBodies) {
 			rapierWorld.removeRigidBody(rb);
-		}
-		for (const collider of this.colliders) {
-			rapierWorld.removeCollider(collider, false);
 		}
 	}
 	public disposeRendering(

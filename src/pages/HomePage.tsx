@@ -1,5 +1,6 @@
-import GeckoLoader from "@/src/_components/LoadingSpinner/GeckoLoader";
 import { Link } from "react-router";
+import GeckoSvg from "../_components/svgs/gecko";
+import defaultStyles from "@/src/_styles/default.module.css";
 
 export default function HomePage() {
 	return (
@@ -13,9 +14,21 @@ export default function HomePage() {
 				width: "100vw",
 			}}
 		>
-			<Link to={"/gecko-game"}>
-				<GeckoLoader />
+			<Link
+				to={"/gecko-game"}
+				style={{
+					display: "flex",
+					flexDirection: "column",
+					gap: "8px",
+				}}
+			>
+				<div
+					className={`${defaultStyles.hoverShadow} ${defaultStyles.mirrorVertical}`}
+				>
+					<GeckoSvg />
+				</div>
 			</Link>
+			<div>Get Started</div>
 		</div>
 	);
 }

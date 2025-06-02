@@ -73,17 +73,19 @@ export class Starship
 
 	public initPhysics(rapierWorld: RAPIER.World): void {
 		try {
-			if (this.rbDesc) {
+			if (this.rbDesc && this.collidersDesc && this.collidersDesc.length > 0) {
 				const rb = rapierWorld.createRigidBody(this.rbDesc);
 				this.rigidBodies.push(rb);
-			}
-			if (this.collidersDesc && this.collidersDesc.length > 0) {
 				for (const colliderDesc of this.collidersDesc) {
 					if (colliderDesc) {
-						const collider = rapierWorld.createCollider(colliderDesc);
+						const collider = rapierWorld.createCollider(colliderDesc, rb);
 						this.colliders.push(collider);
 					}
 				}
+			} else {
+				console.warn(
+					"Starship physics initialization skipped due to missing descriptions"
+				);
 			}
 		} catch (error) {
 			console.error("Failed to initialize physics for Starship:", error);
@@ -93,14 +95,18 @@ export class Starship
 					RAPIER.RigidBodyDesc.fixed().setTranslation(0, 0, 0)
 				);
 				this.rigidBodies.push(fallbackRb);
-				
+
 				const fallbackCollider = rapierWorld.createCollider(
-					RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5)
+					RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5),
+					fallbackRb
 				);
 				this.colliders.push(fallbackCollider);
 				console.log("Created fallback physics for Starship");
 			} catch (fallbackError) {
-				console.error("Failed to create fallback physics for Starship:", fallbackError);
+				console.error(
+					"Failed to create fallback physics for Starship:",
+					fallbackError
+				);
 			}
 		}
 	}
@@ -117,9 +123,6 @@ export class Starship
 	public disposePhysics(rapierWorld: RAPIER.World): void {
 		for (const rb of this.rigidBodies) {
 			rapierWorld.removeRigidBody(rb);
-		}
-		for (const collider of this.colliders) {
-			rapierWorld.removeCollider(collider, false);
 		}
 	}
 	public disposeRendering(

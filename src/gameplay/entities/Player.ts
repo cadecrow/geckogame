@@ -10,7 +10,6 @@ import {
 	PhysicsComponent,
 	type IPhysicsEntity,
 } from "../core/physics/PhysicsComponent";
-import { getTrimeshBodyAndColliders } from "../core/utils/physicsUtils";
 import {
 	createModelLoader,
 	tryLoadModel,
@@ -59,7 +58,7 @@ export class Player
 		}
 
 		// Initialize physics attributes
-		const { rbDesc, collidersDesc } = initializePhysicsAttributes(player.group);
+		const { rbDesc, collidersDesc } = initializePhysicsAttributes();
 		player.rbDesc = rbDesc;
 		player.collidersDesc = collidersDesc;
 
@@ -72,17 +71,19 @@ export class Player
 
 	public initPhysics(rapierWorld: RAPIER.World): void {
 		try {
-			if (this.rbDesc) {
+			if (this.rbDesc && this.collidersDesc && this.collidersDesc.length > 0) {
 				const rb = rapierWorld.createRigidBody(this.rbDesc);
 				this.rigidBodies.push(rb);
-			}
-			if (this.collidersDesc && this.collidersDesc.length > 0) {
 				for (const colliderDesc of this.collidersDesc) {
 					if (colliderDesc) {
 						const collider = rapierWorld.createCollider(colliderDesc);
 						this.colliders.push(collider);
 					}
 				}
+			} else {
+				console.warn(
+					"Player physics initialization skipped due to missing descriptions"
+				);
 			}
 		} catch (error) {
 			console.error("Failed to initialize physics for Player:", error);
@@ -92,14 +93,17 @@ export class Player
 					RAPIER.RigidBodyDesc.dynamic().setTranslation(0, 5, 0)
 				);
 				this.rigidBodies.push(fallbackRb);
-				
+
 				const fallbackCollider = rapierWorld.createCollider(
 					RAPIER.ColliderDesc.capsule(0.5, 0.5)
 				);
 				this.colliders.push(fallbackCollider);
 				console.log("Created fallback physics for Player");
 			} catch (fallbackError) {
-				console.error("Failed to create fallback physics for Player:", fallbackError);
+				console.error(
+					"Failed to create fallback physics for Player:",
+					fallbackError
+				);
 			}
 		}
 	}
@@ -117,9 +121,6 @@ export class Player
 		for (const rb of this.rigidBodies) {
 			rapierWorld.removeRigidBody(rb);
 		}
-		for (const collider of this.colliders) {
-			rapierWorld.removeCollider(collider, false);
-		}
 	}
 	public disposeRendering(
 		scene: THREE.Scene,
@@ -130,11 +131,22 @@ export class Player
 	}
 }
 
-function initializePhysicsAttributes(object: THREE.Object3D): {
+function initializePhysicsAttributes(): {
 	rbDesc: RAPIER.RigidBodyDesc;
 	collidersDesc: RAPIER.ColliderDesc[];
 } {
-	const { rbDesc, collidersDesc } = getTrimeshBodyAndColliders(object);
+	const rbDesc = RAPIER.RigidBodyDesc.dynamic()
+		.setTranslation(0, 5, 0)
+		.setLinearDamping(0.2)
+		.setAngularDamping(10.0)
+		.setCcdEnabled(true);
+	const collidersDesc = [
+		RAPIER.ColliderDesc.capsule(0.5, 0.5)
+			.setTranslation(0, 0.5, 0)
+			.setMass(1.0)
+			.setRestitution(0.1)
+			.setFriction(0.5),
+	];
 	return { rbDesc, collidersDesc };
 }
 

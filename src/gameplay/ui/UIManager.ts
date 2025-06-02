@@ -113,50 +113,6 @@ export class UIManager {
 
 	// --- utility initializers ---
 
-	// --- loading
-	private initLoadingUI(): HTMLDivElement {
-		const loadingContainer = document.createElement("div");
-		loadingContainer.style.position = "absolute";
-		loadingContainer.style.top = "20px";
-		loadingContainer.style.left = "50%";
-		loadingContainer.style.transform = "translateX(-50%)";
-		loadingContainer.style.width = "300px";
-		loadingContainer.style.padding = "10px";
-		loadingContainer.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
-		loadingContainer.style.borderRadius = "5px";
-		loadingContainer.style.color = "white";
-		loadingContainer.style.fontFamily = "Arial, sans-serif";
-		loadingContainer.style.zIndex = "1000";
-		loadingContainer.style.display = "flex";
-		loadingContainer.style.flexDirection = "column";
-		loadingContainer.style.alignItems = "center";
-
-		const loadingText = document.createElement("div");
-		loadingText.classList.add("loading-text");
-		loadingText.textContent = "Loading Scene: 0%";
-		loadingText.style.marginBottom = "5px";
-
-		const loadingBarContainer = document.createElement("div");
-		loadingBarContainer.style.width = "100%";
-		loadingBarContainer.style.height = "20px";
-		loadingBarContainer.style.backgroundColor = "#333";
-		loadingBarContainer.style.borderRadius = "3px";
-		loadingBarContainer.style.overflow = "hidden";
-
-		const loadingBar = document.createElement("div");
-		loadingBar.classList.add("loading-bar");
-		loadingBar.style.width = "0%";
-		loadingBar.style.height = "100%";
-		loadingBar.style.backgroundColor = "#4CAF50";
-		loadingBar.style.transition = "width 0.3s ease";
-
-		loadingBarContainer.appendChild(loadingBar);
-
-		loadingContainer.appendChild(loadingText);
-		loadingContainer.appendChild(loadingBarContainer);
-		return loadingContainer;
-	}
-
 	// --- keyboard helper
 	private initKeyboardHelper(): [HTMLElement, HTMLElement] {
 		// Question mark element

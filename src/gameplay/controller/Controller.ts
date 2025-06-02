@@ -8,14 +8,14 @@ import {
 } from "./Controls";
 
 export class Controller {
-	private readonly events: EventBus;
+	// private readonly events: EventBus;
 	private readonly gameManager: GameManager;
 	private readonly keysPressed: Set<string>;
 	private readonly keyControls: Map<string, KeyControlsByMode>;
 	private readonly mouseControls: Map<string, MouseControlsByMode>;
 
 	constructor(events: EventBus, gameManager: GameManager) {
-		this.events = events;
+		// this.events = events;
 		this.gameManager = gameManager;
 		this.keysPressed = new Set();
 		this.keyControls = getKeyControls(events);

@@ -1,24 +1,21 @@
-import { EventSystem, EVENT } from "../core/events/EventBus";
+import * as THREE from "three";
+import { EventBus } from "../core/events/EventBus";
 import type { GameMode } from "../GameManager";
 
-const UI_ELEMENTS = {
-	LOADING: "loading",
-	KEYBOARD: "keyboard",
-	ORIENTATION_HELP_TEXT: "orientation-help-text",
-	FORWARD_CONTROLS: "forward-controls",
-} as const;
+type UI_ELEMENT =
+	| "loading"
+	| "keyboard_helper"
+	| "orientation_helper"
+	| "forward_controls";
 
 export class UIManager {
 	// meta members
-	private events: EventSystem;
-	private container: HTMLElement;
+	private readonly events: EventBus;
+	private readonly container: HTMLElement;
 	// local members
-	private elements: Map<
-		(typeof UI_ELEMENTS)[keyof typeof UI_ELEMENTS],
-		HTMLElement
-	>;
+	private readonly elements: Map<UI_ELEMENT, HTMLElement>;
 
-	constructor(events: EventSystem, container: HTMLElement) {
+	constructor(events: EventBus, container: HTMLElement) {
 		this.container = container;
 		this.elements = new Map();
 		this.events = events;
@@ -26,7 +23,7 @@ export class UIManager {
 		this.initEventListeners();
 	}
 
-	public cleanup(): void {
+	public dispose(): void {
 		for (const element of this.elements.values()) {
 			this.container.removeChild(element);
 		}
@@ -37,22 +34,16 @@ export class UIManager {
 
 	private init(): void {
 		// this.addUiElement(UI_ELEMENTS.LOADING, this.initLoadingUI());
-		this.addUiElement(UI_ELEMENTS.KEYBOARD, this.initKeyboardHelper());
+		this.addUiElement("keyboard_helper", this.initKeyboardHelper());
+		this.addUiElement("orientation_helper", this.initOrientationHelper());
 		this.addUiElement(
-			UI_ELEMENTS.ORIENTATION_HELP_TEXT,
-			this.initOrientationHelpText()
-		);
-		this.addUiElement(
-			UI_ELEMENTS.FORWARD_CONTROLS,
+			"forward_controls",
 			this.initForwardControls(this.events)
 		);
 	}
 
 	private initEventListeners(): void {
-		this.events.on(
-			EVENT.GAME_MODE_UPDATED,
-			this.handleGameModeUpdated.bind(this)
-		);
+		this.events.on("game_mode_updated", this.handleGameModeUpdated.bind(this));
 	}
 
 	// --- event handlers ---
@@ -60,18 +51,35 @@ export class UIManager {
 		prev: GameMode;
 		curr: GameMode;
 	}): void {
-		if (args.curr === "gecko") {
-			this.showOrientationHelpText();
-		} else {
-			this.hideOrientationHelpText();
+		// hide elements when switching away from a mode
+		switch (args.prev) {
+			case "loading":
+				break;
+			case "waiting":
+				break;
+			case "normal":
+				break;
+			case "gecko":
+				this.hideElement("orientation_helper");
+				break;
+		}
+
+		// show elements when switching to a mode
+		switch (args.curr) {
+			case "loading":
+				break;
+			case "waiting":
+				break;
+			case "normal":
+				break;
+			case "gecko":
+				this.showElement("orientation_helper");
+				break;
 		}
 	}
 
 	// --- class interactions ---
-	public addUiElement(
-		name: (typeof UI_ELEMENTS)[keyof typeof UI_ELEMENTS],
-		element: HTMLElement
-	): void {
+	public addUiElement(name: UI_ELEMENT, element: HTMLElement): void {
 		this.elements.set(name, element);
 		this.container.appendChild(element);
 	}
@@ -151,8 +159,8 @@ export class UIManager {
 		const keyboardHelper = document.createElement("div");
 		keyboardHelper.style.position = "absolute";
 		keyboardHelper.style.zIndex = "1000";
-		keyboardHelper.style.bottom = "10px";
-		keyboardHelper.style.left = "10px";
+		keyboardHelper.style.bottom = "12px";
+		keyboardHelper.style.left = "12px";
 		keyboardHelper.style.color = "white";
 		keyboardHelper.style.background = "oklch(0.2 0.007 0)";
 		keyboardHelper.style.padding = "12px";
@@ -215,11 +223,11 @@ export class UIManager {
 
 	// --- forward controls
 	// @todo - for curiosity - make these react components instead of defining with pure js
-	private initForwardControls(events: EventSystem): HTMLElement {
+	private initForwardControls(events: EventBus): HTMLElement {
 		const forwardControls = document.createElement("div");
 		forwardControls.style.position = "absolute";
-		forwardControls.style.bottom = "10px";
-		forwardControls.style.right = "10px";
+		forwardControls.style.bottom = "12px";
+		forwardControls.style.right = "12px";
 		forwardControls.style.color = "white";
 		forwardControls.style.zIndex = "1000";
 
@@ -246,8 +254,14 @@ export class UIManager {
 		leftHalf.style.userSelect = "none";
 		leftHalf.onclick = () => {
 			console.log("forwardControls: move forward direction left 15 degrees");
-			events.emit(EVENT.UPDATE_PHYSICS_ORIENTATION_COMMAND, {
-				semanticCommand: "forwardLeft",
+			events.emit("update_player_orientation_command", {
+				quaternion: new THREE.Quaternion().setFromAxisAngle(
+					// yes, the vector is already normalized with the provided values.
+					// HOWEVER, setFromAxisAngle method expects a normalized vector,
+					// so the normalize method is added for clarity, to future proof changes, and allow others to quickly copy and paste.
+					new THREE.Vector3(0, 1, 0).normalize(),
+					Math.PI / 12 // 15 degrees in radians
+				),
 			});
 		};
 
@@ -263,9 +277,13 @@ export class UIManager {
 		rightHalf.style.fontSize = "24px";
 		rightHalf.style.userSelect = "none";
 		rightHalf.onclick = () => {
-			console.log("forwardControls: move forward direction right 15 degrees");
-			events.emit(EVENT.UPDATE_PHYSICS_ORIENTATION_COMMAND, {
-				semanticCommand: "forwardRight",
+			console.log("UI Manager: Change forward direction right 15 degrees");
+			events.emit("update_player_orientation_command", {
+				quaternion: new THREE.Quaternion().setFromAxisAngle(
+					// redundant normalization for certainty and expressiveness
+					new THREE.Vector3(0, 1, 0).normalize(),
+					-Math.PI / 12 // -15 degrees in radians
+				),
 			});
 		};
 
@@ -287,7 +305,7 @@ export class UIManager {
 	}
 
 	// --- help text for gecko mode
-	private initOrientationHelpText(): HTMLDivElement {
+	private initOrientationHelper(): HTMLDivElement {
 		const helpTextElement = document.createElement("div");
 		helpTextElement.style.display = "none"; // initially hidden
 		helpTextElement.style.position = "absolute";
@@ -309,19 +327,21 @@ export class UIManager {
 		return helpTextElement;
 	}
 
-	private showOrientationHelpText(): void {
-		const helpTextElement = this.elements.get("orientation-help-text");
-		if (helpTextElement) {
-			helpTextElement.style.display = "block";
+	private showElement(el: UI_ELEMENT): void {
+		const element = this.elements.get(el);
+		if (element) {
+			element.style.display = "block";
+			element.style.opacity = "1";
+		} else {
+			console.warn("Element not found: ", el);
 		}
 	}
 
-	private hideOrientationHelpText(): void {
-		const helpTextElement = this.elements.get("orientation-help-text");
-		if (helpTextElement) {
-			helpTextElement.style.display = "none";
+	private hideElement(el: UI_ELEMENT): void {
+		const element = this.elements.get(el);
+		if (element) {
+			element.style.display = "none";
+			element.style.opacity = "0";
 		}
 	}
-
-	// --- ---
 }

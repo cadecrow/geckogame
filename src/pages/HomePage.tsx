@@ -1,6 +1,7 @@
 import GeckoLoader from "@/src/_components/LoadingSpinner/GeckoLoader";
+import { Link } from "react-router";
 
-export default function PlaygroundPage() {
+export default function HomePage() {
 	return (
 		<div
 			style={{
@@ -12,7 +13,9 @@ export default function PlaygroundPage() {
 				width: "100vw",
 			}}
 		>
-			<GeckoLoader />
+			<Link to={"/gecko-game"}>
+				<GeckoLoader />
+			</Link>
 		</div>
 	);
 }

@@ -17,7 +17,7 @@ export function createModelLoader(draco: boolean = true): GLTFLoader {
 	return gltfLoader;
 }
 
-export async function tryAsyncLoadModel(
+export function tryLoadModel(
 	modelLoader: GLTFLoader,
 	modelPath: string,
 	onLoad?: (gltf: GLTF) => {
@@ -48,11 +48,11 @@ export async function tryAsyncLoadModel(
 				if (onProgress) {
 					onProgress(progress);
 				} else {
-					console.log(
-						"Loading model " + modelPath + ":",
-						(progress.loaded / progress.total) * 100,
-						"%"
-					);
+					// console.log(
+					// 	"Loading model " + modelPath + ":",
+					// 	(progress.loaded / progress.total) * 100,
+					// 	"%"
+					// );
 				}
 			},
 			(error) => {

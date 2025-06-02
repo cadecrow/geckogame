@@ -3,23 +3,19 @@ import ReactDom from "react-dom/client";
 import "./index.css";
 import { createBrowserRouter, RouterProvider } from "react-router";
 
-// import GeckoGamePage from "./pages/GeckoGamePage";
-import PlaygroundPage from "./pages/PlaygroundPage";
+import GeckoGamePage from "./pages/GeckoGamePage";
+import HomePage from "./pages/HomePage";
 import NotFoundPage from "./pages/NotFoundPage";
 
 const router = createBrowserRouter([
 	{
 		path: "/",
-		Component: PlaygroundPage,
+		Component: HomePage,
 	},
 	{
-		path: "/playground",
-		Component: PlaygroundPage,
+		path: "/gecko-game",
+		Component: GeckoGamePage,
 	},
-	// {
-	// 	path: "/gecko-game",
-	// 	Component: GeckoGamePage,
-	// },
 	{
 		path: "*",
 		Component: NotFoundPage,

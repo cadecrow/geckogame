@@ -1,281 +1,158 @@
 import * as THREE from "three";
 import * as RAPIER from "@dimforge/rapier3d-compat";
+import type { EventBus } from "../core/events/EventBus";
 import { Entity, type EntityId } from "../core/ec-s/Entity";
 import {
+	RenderingComponent,
+	type IRenderableEntity,
+} from "../core/rendering/RenderingComponent";
+import {
+	PhysicsComponent,
+	type IPhysicsEntity,
+} from "../core/physics/PhysicsComponent";
+import { getTrimeshBodyAndColliders } from "../core/utils/physicsUtils";
+import {
 	createModelLoader,
-	tryAsyncLoadModel,
-	tryResolveAnimationActions,
-	type EntityAnimationMap,
+	tryLoadModel,
 } from "../core/utils/modelLoaderUtils";
-import type { AnimationResolver } from "../core/utils/modelLoaderUtils";
-import { EVENT, EventSystem } from "../core/events/EventBus";
-import { QuaternionVisualizer } from "./utilObjects/QuaternionVisualizer";
 
-// --- Definitions for entity ---
+// Definitions for entity
 const MODEL_PATH: string = "/models/robots/Cute_Bot.glb";
 const ENTITY_ID: EntityId = "player";
-// ---
-const ANIMATION_RESOLVERS: AnimationResolver[] = [
-	{
-		intendedName: "walking",
-		potentialNames: ["walk", "run", "walking"],
-		actionCallback: (action) => {
-			action.setLoop(THREE.LoopRepeat, Infinity);
-			action.timeScale = 0.5;
-			action.clampWhenFinished = true;
-			action.stop();
-		},
-	},
-];
-// ---
-const QUATERNION_VISUALIZER_OFFSET = new THREE.Vector3(0, 3.5, 0);
-// ---
 
-export class Player extends Entity {
-	private events: EventSystem;
-	private quaternionVisualizer: QuaternionVisualizer | null = null;
-	// Character model
-	public mixer: THREE.AnimationMixer;
-	public animationActions: EntityAnimationMap;
-	// physics descriptions
-	public rbDesc: RAPIER.RigidBodyDesc;
-	public colliderDesc: RAPIER.ColliderDesc;
-	public moveSpeed: number;
-	public jumpImpulse: number;
-	public movingForces: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
-	private isLoading: boolean = false;
-	private isDisposed: boolean = false;
+export class Player
+	extends Entity
+	implements IRenderableEntity, IPhysicsEntity
+{
+	public readonly group: THREE.Group = new THREE.Group();
+	public readonly rigidBodies: RAPIER.RigidBody[] = [];
+	public readonly colliders: RAPIER.Collider[] = [];
 
+	private rbDesc: RAPIER.RigidBodyDesc | undefined;
+	private collidersDesc: RAPIER.ColliderDesc[] | undefined;
 
-	constructor(events: EventSystem) {
-		super(ENTITY_ID);
-		console.log("[Player] Constructor called");
-		this.events = events;
-		this.model = new THREE.Group(); // Temporary empty group
-		this.mixer = new THREE.AnimationMixer(this.model);
-		this.animationActions = new Map();
+	constructor(events: EventBus) {
+		super(events, ENTITY_ID);
+		this.addComponent(new RenderingComponent(this));
+		this.addComponent(new PhysicsComponent(this));
+		// be sure to prepare all necessary data for initialization to avoid race conditions in initialization
+	}
+
+	static async create(events: EventBus): Promise<Player> {
+		const player = new Player(events);
+
+		// @todo Show loading spinner or placeholder
+
+		// Load model asynchronously
+		const { model } = await loadModel();
+		// const { model, mixer, animations } = await loadModel();
+		if (model) {
+			player.group.add(model);
+		} else {
+			// throw new Error("Failed to load starship model");
+			player.group.add(
+				new THREE.Mesh(
+					new THREE.BoxGeometry(1, 1, 1),
+					new THREE.MeshBasicMaterial({ color: 0x804080 })
+				)
+			);
+		}
 
 		// Initialize physics attributes
-		const { rbDesc, colliderDesc, moveSpeed, jumpImpulse } =
-			this.initializePhysicsAttributes();
-		this.rbDesc = rbDesc;
-		this.colliderDesc = colliderDesc;
-		this.moveSpeed = moveSpeed;
-		this.jumpImpulse = jumpImpulse;
+		const { rbDesc, collidersDesc } = initializePhysicsAttributes(player.group);
+		player.rbDesc = rbDesc;
+		player.collidersDesc = collidersDesc;
 
-		// Set up event listeners
-		this.initEventListeners();
-
-		// Load the model asynchronously
-		if (!this.isLoading && !this.isDisposed) {
-			console.log("[Player] Starting model load");
-			this.isLoading = true;
-			this.loadModel();
-		}
+		return player;
 	}
 
-	private initEventListeners(): void {
-		this.boundMoveCommandHandler = this.handleMoveCommand.bind(this);
-		this.events.on(EVENT.PLAYER_MOVE_COMMAND, this.boundMoveCommandHandler);
+	public initRendering(scene: THREE.Scene): void {
+		scene.add(this.group);
 	}
 
-	private updateMovingForces(forceVector: THREE.Vector3): void {
-		const prev = this.movingForces.clone();
-		this.movingForces.add(forceVector);
-
-		// Ensure horizontal movement forces don't exceed 1.0 in magnitude
-		// This normalizes XZ plane movement while preserving Y
-		if (
-			Math.abs(this.movingForces.x) > 0.01 ||
-			Math.abs(this.movingForces.z) > 0.01
-		) {
-			const horizontalLength = Math.sqrt(
-				this.movingForces.x * this.movingForces.x +
-					this.movingForces.z * this.movingForces.z
-			);
-
-			if (horizontalLength > 1.0) {
-				const scale = 1.0 / horizontalLength;
-				this.movingForces.x *= scale;
-				this.movingForces.z *= scale;
-			}
-		}
-
-		this.events.emit(EVENT.ENTITY_FORCE_VECTOR_UPDATED, {
-			entityId: this.id,
-			prev,
-			curr: this.movingForces,
-		});
-	}
-
-	private handleMoveCommand(payload: {
-		command: "MOVE_START" | "MOVE_END";
-		direction: string;
-	}): void {
-		if (payload.command === "MOVE_START") {
-			console.log("move start: ", payload.direction);
-			// Update the moving forces
-			this.updateMovingForces(
-				DIRECTION_TO_VECTOR[payload.direction.toLowerCase()]
-			);
-			// update the animation
-			const walkAction = this.animationActions.get("walking");
-			if (walkAction && this.movingForces.length() > 0.01) {
-				console.log("playing walk action");
-				walkAction.reset();
-				walkAction.timeScale = 0.5;
-				walkAction.play();
-			}
-		} else if (payload.command === "MOVE_END") {
-			console.log("move end: ", payload.direction);
-			// Update the moving forces
-			this.updateMovingForces(
-				DIRECTION_TO_VECTOR[payload.direction.toLowerCase()].negate()
-			);
-			// update the animation
-			const walkAction = this.animationActions.get("walking");
-			if (walkAction && this.movingForces.length() < 0.01) {
-				console.log("stopping walk action");
-				walkAction.stop();
-			}
-		}
-	}
-
-	public initQuaternionVisualizer(scene: THREE.Scene): void {
-		if (!this.quaternionVisualizer) {
-			this.quaternionVisualizer = new QuaternionVisualizer(
-				scene,
-				this,
-				QUATERNION_VISUALIZER_OFFSET
-			);
-		}
-	}
-
-	public dispose(): void {
-		console.log("[Player] Disposing player");
-		this.isDisposed = true;
-
-		// Clean up event listeners
-		if (this.boundMoveCommandHandler) {
-			this.events.off(EVENT.PLAYER_MOVE_COMMAND, this.boundMoveCommandHandler);
-			this.boundMoveCommandHandler = null;
-		}
-
-		// Clean up animations
-		this.animationActions.forEach((action) => action.stop());
-		this.animationActions.clear();
-
-		// Clean up mixer
-		if (this.mixer) {
-			this.mixer.stopAllAction();
-			this.mixer.uncacheRoot(this.model);
-		}
-
-		// Clean up quaternion visualizer
-		if (this.quaternionVisualizer) {
-			this.quaternionVisualizer.dispose();
-			this.quaternionVisualizer = null;
-		}
-
-		// Clean up model
-		if (this.model) {
-			this.model.clear();
-		}
-
-		// Emit event that entity is disposed
-		this.events.emit(EVENT.ENTITY_DISPOSED, {
-			entityId: this.id,
-		});
-	}
-
-	private initializePhysicsAttributes(): {
-		rbDesc: RAPIER.RigidBodyDesc;
-		colliderDesc: RAPIER.ColliderDesc;
-		moveSpeed: number;
-		jumpImpulse: number;
-	} {
-		return {
-			rbDesc: RAPIER.RigidBodyDesc.dynamic()
-				.setTranslation(0, 5, 0)
-				.setLinearDamping(0.2)
-				.setAngularDamping(10.0)
-				.setCcdEnabled(true),
-			colliderDesc: RAPIER.ColliderDesc.capsule(0.5, 0.5)
-				.setFriction(0.9)
-				.setRestitution(0.0),
-			moveSpeed: 3.5, // meters per second
-			jumpImpulse: 7, // upward impulse
-		};
-	}
-
-	private async loadModel(): Promise<void> {
-		if (this.isDisposed) return;
-
-		console.log("[Player] loadModel function called");
-		const modelLoader = createModelLoader();
+	public initPhysics(rapierWorld: RAPIER.World): void {
 		try {
-			console.log("[Player] Attempting to load model from:", MODEL_PATH);
-			const { model, mixer, animations } = await tryAsyncLoadModel(
-				modelLoader,
-				MODEL_PATH
-			);
-
-			if (this.isDisposed) {
-				console.log(
-					"[Player] Player was disposed during model load, cleaning up"
-				);
-				model.clear();
-				mixer.stopAllAction();
-				return;
+			if (this.rbDesc) {
+				const rb = rapierWorld.createRigidBody(this.rbDesc);
+				this.rigidBodies.push(rb);
 			}
-
-			// Debug animation information
-			console.log(
-				"[Player] Model loaded successfully with animations:",
-				animations.map((a) => ({
-					name: a.name,
-					duration: a.duration,
-					fps: 1 / a.duration,
-				}))
-			);
-
-			this.model = model;
-			this.mixer = mixer;
-
-			// Set a more reasonable update rate for the mixer
-			this.mixer.timeScale = 1.0;
-
-			this.animationActions = tryResolveAnimationActions(
-				ANIMATION_RESOLVERS,
-				mixer,
-				animations
-			);
-
-			// Start with idle animation
-			const idleAction = this.animationActions.get("idle");
-			if (idleAction) {
-				idleAction.play();
-			}
-
-			// Emit event that model is loaded
-			if (!this.isDisposed) {
-				console.log("[Player] Emitting model load success event");
-				this.events.emit(EVENT.ENTITY_MODEL_LOAD_SUCCESS, {
-					entityId: this.id,
-					model: this.model,
-					animations,
-				});
+			if (this.collidersDesc && this.collidersDesc.length > 0) {
+				for (const colliderDesc of this.collidersDesc) {
+					if (colliderDesc) {
+						const collider = rapierWorld.createCollider(colliderDesc);
+						this.colliders.push(collider);
+					}
+				}
 			}
 		} catch (error) {
-			console.error("[Player] Failed to load model:", error);
-			if (!this.isDisposed) {
-				this.events.emit(EVENT.ENTITY_MODEL_LOAD_ERROR, {
-					entityId: this.id,
-					error: error as Error,
-				});
+			console.error("Failed to initialize physics for Player:", error);
+			// Create a fallback simple collider if physics initialization fails
+			try {
+				const fallbackRb = rapierWorld.createRigidBody(
+					RAPIER.RigidBodyDesc.dynamic().setTranslation(0, 5, 0)
+				);
+				this.rigidBodies.push(fallbackRb);
+				
+				const fallbackCollider = rapierWorld.createCollider(
+					RAPIER.ColliderDesc.capsule(0.5, 0.5)
+				);
+				this.colliders.push(fallbackCollider);
+				console.log("Created fallback physics for Player");
+			} catch (fallbackError) {
+				console.error("Failed to create fallback physics for Player:", fallbackError);
 			}
-		} finally {
-			this.isLoading = false;
 		}
+	}
+
+	// no updates for this entity
+	public updatePhysics(): void {
+		return;
+	}
+	// no updates for this entity
+	public updateRendering(): void {
+		return;
+	}
+
+	public disposePhysics(rapierWorld: RAPIER.World): void {
+		for (const rb of this.rigidBodies) {
+			rapierWorld.removeRigidBody(rb);
+		}
+		for (const collider of this.colliders) {
+			rapierWorld.removeCollider(collider, false);
+		}
+	}
+	public disposeRendering(
+		scene: THREE.Scene,
+		camera: THREE.PerspectiveCamera
+	): void {
+		scene.remove(this.group);
+		camera.remove(this.group);
+	}
+}
+
+function initializePhysicsAttributes(object: THREE.Object3D): {
+	rbDesc: RAPIER.RigidBodyDesc;
+	collidersDesc: RAPIER.ColliderDesc[];
+} {
+	const { rbDesc, collidersDesc } = getTrimeshBodyAndColliders(object);
+	return { rbDesc, collidersDesc };
+}
+
+async function loadModel(): Promise<{
+	model: THREE.Group | undefined;
+	mixer: THREE.AnimationMixer | undefined;
+	animations: THREE.AnimationClip[] | undefined;
+}> {
+	const modelLoader = createModelLoader();
+	try {
+		const { model, mixer, animations } = await tryLoadModel(
+			modelLoader,
+			MODEL_PATH
+		);
+
+		return { model, mixer, animations };
+	} catch (error) {
+		console.error("Failed to load starship model:", error);
+		return { model: undefined, mixer: undefined, animations: undefined };
 	}
 }

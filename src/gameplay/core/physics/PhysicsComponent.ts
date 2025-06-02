@@ -5,9 +5,9 @@ import type { Entity } from "../ec-s/Entity";
 export interface IPhysicsEntity extends Entity {
 	rigidBodies: RAPIER.RigidBody[];
 	colliders: RAPIER.Collider[];
-	initPhysics(): void; // is there a good way to make this generic? sometimes, there will be multiple colliders and rigid bodies for a given entity
-	updatePhysics(deltaTime: number): void;
-	disposePhysics(): void;
+	initPhysics(rapierWorld: RAPIER.World): void; // is there a good way to make this generic? sometimes, there will be multiple colliders and rigid bodies for a given entity
+	updatePhysics(deltaTime: number, rapierWorld: RAPIER.World): void;
+	disposePhysics(rapierWorld: RAPIER.World): void;
 }
 
 export class PhysicsComponent extends Component<IPhysicsEntity> {

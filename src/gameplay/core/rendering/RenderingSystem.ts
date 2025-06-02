@@ -18,7 +18,6 @@ import {
 	RenderingComponent,
 	type IRenderableEntity,
 } from "./RenderingComponent";
-import type { EntityId } from "../ec-s/Entity";
 
 export class RenderingSystem extends System {
 	private readonly container: HTMLElement;
@@ -60,19 +59,28 @@ export class RenderingSystem extends System {
 
 	public update(deltaTime: number): void {
 		this.ensureValidCache();
-		for (const entity in this.cachedEntities as IRenderableEntity[]) {
-			(entity as unknown as IRenderableEntity).updateRendering(deltaTime);
+		if (this.cachedEntities) {
+			for (const entity of this.cachedEntities) {
+				entity.updateRendering(
+					deltaTime,
+					this.scene,
+					this.camera,
+					this.renderer
+				);
+			}
+			this.renderer.render(this.scene, this.camera);
 		}
 	}
 
 	public dispose(): void {
-		console.log("Destorying RenderingSystem");
+		console.log("Destroying RenderingSystem");
 		window.removeEventListener("resize", this.handleResize);
 
 		this.populateCache();
-		for (const entity in this.cachedEntities as IRenderableEntity[]) {
-			// etf typescript compiler... why does it think entity is string?
-			(entity as unknown as IRenderableEntity).disposeRendering();
+		if (this.cachedEntities) {
+			for (const entity of this.cachedEntities) {
+				entity.disposeRendering(this.scene, this.camera, this.renderer);
+			}
 		}
 
 		// Clean up all objects in the scene
@@ -84,9 +92,15 @@ export class RenderingSystem extends System {
 
 	// --- core init ---
 	private initEventListeners(): void {
-		this.events.on("entity_request_init_rendering", (payload) => {
-			this.cachedEntities = null;
-			this.initEntityRendering(payload.entityId);
+		this.events.on("entity_added_to_manager", (payload) => {
+			if (payload.entity.hasComponent(RenderingComponent)) {
+				this.cachedEntities = null;
+				(payload.entity as IRenderableEntity).initRendering(
+					this.scene,
+					this.camera,
+					this.renderer
+				);
+			}
 		});
 	}
 
@@ -114,18 +128,6 @@ export class RenderingSystem extends System {
 			RenderingComponent,
 			IRenderableEntity
 		>(RenderingComponent);
-	}
-
-	private initEntityRendering(entityId: EntityId) {
-		const entity = this.entityManager.getEntity(entityId) as IRenderableEntity;
-		if (
-			entity &&
-			entity.hasComponent<RenderingComponent, IRenderableEntity>(
-				RenderingComponent
-			)
-		) {
-			entity.initRendering();
-		}
 	}
 
 	private disposeThreeSceneObjects() {

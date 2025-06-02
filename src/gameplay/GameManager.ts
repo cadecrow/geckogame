@@ -2,12 +2,11 @@ import { UIManager } from "./ui/UIManager";
 import { RenderingSystem } from "./core/rendering/RenderingSystem";
 import { EventBus } from "./core/events/EventBus";
 import { PhysicsSystem } from "./core/physics/PhysicsSystem";
-import { Entity, type EntityId } from "./core/ec-s/Entity";
-import { LandingPlane } from "./entities/LandingPlane";
-import { Player } from "./entities/Player";
-import { Starship } from "./entities/Starship";
 import { Controller } from "./controller/Controller";
 import { EntityManager } from "./core/ec-s/EntityManager";
+import { LandingPlane } from "./entities/LandingPlane";
+import { Starship } from "./entities/Starship";
+import { Player } from "./entities/Player";
 
 // difference between a manager and a system?
 // manager will have some of its own logic that controls its children
@@ -19,12 +18,12 @@ import { EntityManager } from "./core/ec-s/EntityManager";
 // - entities have their own updatePhysics logic that the system prompts them to run
 // systems are used as a sync layer
 
-export type GameMode = "loading" | "normal" | "gecko";
+export type GameMode = "loading" | "waiting" | "normal" | "gecko";
 
 export class GameManager {
 	// parent DOM element
 	private readonly container: HTMLElement;
-	// abstracted managers
+	// abstracted managers / systems
 	private readonly entityManager: EntityManager;
 	private readonly events: EventBus;
 	private readonly controller: Controller;
@@ -35,55 +34,90 @@ export class GameManager {
 	public gameMode: GameMode = "loading";
 	// ---
 
-	constructor(container: HTMLElement) {
+	constructor(container: HTMLElement, setLoading: (loading: boolean) => void) {
 		this.container = container;
 		this.events = new EventBus();
-		this.entityManager = new EntityManager();
+		this.entityManager = new EntityManager(this.events);
 		this.ui = new UIManager(this.events, this.container);
 		this.physics = new PhysicsSystem(this.events, this.entityManager);
 		this.rendering = new RenderingSystem(
 			this.container,
 			this.events,
-			this.entities
+			this.entityManager
 		);
-		this.controller = new Controller(this.events, this.gameMode);
+		this.controller = new Controller(this.events, this);
 
-		this.initEventListeners();
+		this.initEventListeners(setLoading);
 	}
 
-	public destroy(): void {
+	// Public getter for external event listening
+	public get eventBus(): EventBus {
+		return this.events;
+	}
+
+	public dispose(): void {
 		console.log("Destroying game manager");
 
-		// Clean up managers
-		// this.controller.destroy();
-		this.rendering.destroy();
-		if (this.physics) this.physics.destroy();
-
-		// Clean up event system last
-		this.events.cleanup();
+		// --- Clean up managers and systems ---
+		this.ui.dispose();
+		this.controller.dispose();
+		this.rendering.dispose();
+		this.physics.dispose();
+		// clean up entity manager near the end
+		this.entityManager.dispose();
+		// destroy event system last - some events may be emitted during destruction
+		this.events.destroy();
 	}
 
 	// --- core init ---
-	private initEventListeners(): void {
+	private initEventListeners(setLoading: (loading: boolean) => void): void {
 		this.events.on(
-			EVENT.CHANGE_GAME_MODE_COMMAND,
+			"change_game_mode_command",
 			(args: { gameMode: GameMode }) => {
 				const prev = this.gameMode;
 				this.gameMode = args.gameMode;
-				this.events.emit(EVENT.GAME_MODE_UPDATED, {
+				this.events.emit("game_mode_updated", {
 					prev,
 					curr: this.gameMode,
 				});
+				console.log(`Game mode changed from ${prev} to ${this.gameMode}`);
 			}
 		);
+
+		this.events.on("physics_engine_initialized", () => {
+			this.initializeGame(setLoading);
+		});
+
+		// start game
+		this.events.on("start_game_command", () => {
+			this.update(); // start the game loop
+		});
 	}
 
 	// --- event handlers ---
 
+	// --- game loop ---
 	private update(): void {
 		requestAnimationFrame(() => this.update());
 		const deltaTime = this.rendering.clock.getDelta();
 		this.physics.update(deltaTime);
+		//rendering depends on physics, so update it after physics
 		this.rendering.update(deltaTime);
+	}
+
+	// --- helpers ---
+	private async initializeGame(
+		setLoading: (loading: boolean) => void
+	): Promise<void> {
+		this.entityManager.addEntity(new LandingPlane(this.events));
+		const starship = await Starship.create(this.events);
+		this.entityManager.addEntity(starship);
+		const player = await Player.create(this.events);
+		this.entityManager.addEntity(player);
+		this.rendering.update(0);
+		this.events.emit("change_game_mode_command", {
+			gameMode: "waiting",
+		}); // @todo - update game mode to leave loading at appropriate location
+		setLoading(false);
 	}
 }

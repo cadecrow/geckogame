@@ -1,30 +1,32 @@
 import * as THREE from "three";
 import type { GameMode } from "../../GameManager";
-import type { EntityId } from "../ec-s/Entity";
+import type { Entity, EntityId } from "../ec-s/Entity";
 
 // Defines the registry of all game events.
 // Map event names to their payload types.
 export interface EventRegistry {
-	// --- CONTROLLER COMMANDS ---
+	// --- debugging events ---
+	dummy_mouse_event: { message: string; data: MouseEvent };
+	dummy_keyboard_event: { message: string; data: KeyboardEvent };
+
+	// --- COMMANDS --- (usually triggered by user input)
 	change_game_mode_command: { gameMode: GameMode };
 	player_move_command: {
-		command: "MOVE_START" | "MOVE_END";
-		direction: "FORWARD" | "BACKWARD" | "LEFT" | "RIGHT";
+		command: "MOVE_START" | "MOVE_END" | "START_MODIFY_UP" | "STOP_MODIFY_UP";
+		direction: "FORWARD" | "BACKWARD" | "LEFT" | "RIGHT" | "UP";
 	};
-	player_jump_command: void;
 	player_stop_command: void;
 	wall_selection_command: {
 		position: THREE.Vector3;
 		normal: THREE.Vector3;
 	};
-	update_physics_orientation_command: {
+	update_player_orientation_command: {
 		quaternion: THREE.Quaternion;
 	};
+	start_game_command: void;
 
 	// --- INTERNAL EVENT REQUESTS ---
 	// convention: <requester>_request_<description>_<target>
-	entity_request_init_physics: { entityId: EntityId };
-	entity_request_init_rendering: { entityId: EntityId };
 
 	// --- INTERNAL STATUS EVENTS ---
 	entity_model_load_error: { entityId: EntityId; error: Error };
@@ -35,6 +37,7 @@ export interface EventRegistry {
 	};
 	entity_disposed: { entityId: EntityId };
 	physics_engine_initialized: void;
+	entity_added_to_manager: { entity: Entity };
 
 	// --- STATE CHANGES ---
 	entity_physics_transform_updated: {

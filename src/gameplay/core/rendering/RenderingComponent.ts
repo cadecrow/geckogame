@@ -11,9 +11,22 @@ import type { Entity } from "../ec-s/Entity";
 
 export interface IRenderableEntity extends Entity {
 	group: THREE.Group;
-	initRendering(): void;
-	updateRendering(deltaTime: number): void;
-	disposeRendering(): void;
+	initRendering(
+		scene: THREE.Scene,
+		camera: THREE.PerspectiveCamera,
+		renderer: THREE.WebGLRenderer
+	): void;
+	updateRendering(
+		deltaTime: number,
+		scene: THREE.Scene,
+		camera: THREE.PerspectiveCamera,
+		renderer: THREE.WebGLRenderer
+	): void;
+	disposeRendering(
+		scene: THREE.Scene,
+		camera: THREE.PerspectiveCamera,
+		renderer: THREE.WebGLRenderer
+	): void;
 }
 
 export class RenderingComponent extends Component<IRenderableEntity> {

@@ -26,7 +26,7 @@ export default function HomePage() {
 				<div className={`${defaultStyles.mirrorVertical}`}>
 					<GeckoSvg />
 				</div>
-				<div>Get Started</div>
+				<div>Click Here to Get Started</div>
 			</Link>
 		</div>
 	);

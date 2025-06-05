@@ -97,6 +97,13 @@ export default function GeckoGamePage() {
 						Loading Game Assets...
 					</div>
 					<div
+						style={{ marginTop: "12px", color: "white", textAlign: "center" }}
+					>
+						I am hosting everything for free, so it may take a while. Hopefully
+						I haven't gone over usage limits! Otherwise, you may be staring at
+						this screen for a while.
+					</div>
+					<div
 						style={{
 							marginTop: "12px",
 							color: "rgba(255,255,255,0.7)",

@@ -21,14 +21,13 @@ export default function HomePage() {
 					flexDirection: "column",
 					gap: "8px",
 				}}
+				className={`${defaultStyles.hoverShadow}`}
 			>
-				<div
-					className={`${defaultStyles.hoverShadow} ${defaultStyles.mirrorVertical}`}
-				>
+				<div className={`${defaultStyles.mirrorVertical}`}>
 					<GeckoSvg />
 				</div>
+				<div>Click Here to Get Started</div>
 			</Link>
-			<div>Get Started</div>
 		</div>
 	);
 }

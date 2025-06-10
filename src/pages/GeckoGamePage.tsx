@@ -74,7 +74,7 @@ export default function GeckoGamePage() {
 				geckoGameRef.current.eventBus.emit("start_game_command", undefined);
 			}
 			setGameStage("playing");
-		}, 1000); // Slightly shorter than button fade to ensure smooth transition
+		}, 900); // note duration of button fade
 	};
 
 	return (

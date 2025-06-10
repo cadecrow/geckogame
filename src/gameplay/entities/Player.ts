@@ -51,6 +51,10 @@ export class Player
 	public forwardDirection: THREE.Vector3 = new THREE.Vector3(0, 0, 1); // Forward direction (orthogonal to gravity)
 	public rightDirection: THREE.Vector3 = new THREE.Vector3(1, 0, 0); // Right direction (orthogonal to gravity)
 
+	// Fall detection
+	private hasFallen: boolean = false; // Track if player has fallen off the platform
+	private readonly FALL_THRESHOLD = -150; // Y position threshold for falling
+
 	// Logging state tracking
 	private lastForceApplied: { x: number; z: number } = { x: 0, z: 0 }; // Track previous force for change detection
 	private frameCount: number = 0; // Frame counter for position logging
@@ -168,7 +172,7 @@ export class Player
 			(payload: { direction: "LEFT" | "RIGHT" }) => {
 				const adjustment =
 					payload.direction === "LEFT" ? Math.PI / 12 : -Math.PI / 12; // 15 degrees
-				
+
 				// Get the "up" vector (opposite to gravity)
 				const gravityNorm = new THREE.Vector3(
 					this.playerGravity.x,
@@ -176,16 +180,19 @@ export class Player
 					this.playerGravity.z
 				).normalize();
 				const up = gravityNorm.clone().multiplyScalar(-1);
-				
+
 				// Rotate the forward direction around the up axis
-				const rotation = new THREE.Quaternion().setFromAxisAngle(up, adjustment);
+				const rotation = new THREE.Quaternion().setFromAxisAngle(
+					up,
+					adjustment
+				);
 				this.forwardDirection.applyQuaternion(rotation);
-				
+
 				// Recalculate right direction from new forward direction
 				this.rightDirection = new THREE.Vector3()
 					.crossVectors(this.forwardDirection, up)
 					.normalize();
-				
+
 				console.log(
 					`Player: Orientation adjusted by ${(
 						(adjustment * 180) /
@@ -408,9 +415,9 @@ export class Player
 	}
 
 	public updatePhysics(
-		deltaTime: number,
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		rapierWorld: RAPIER.World
+		deltaTime: number
+		// removing for now - eslint-disable-next-line @typescript-eslint/no-unused-vars
+		// rapierWorld: RAPIER.World
 	): void {
 		if (this.rigidBodies.length === 0) {
 			console.log("Player: No rigid bodies for physics update");

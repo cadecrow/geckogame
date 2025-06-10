@@ -89,6 +89,15 @@ export class Starship
 			}
 		} catch (error) {
 			console.error("Failed to initialize physics for Starship:", error);
+			
+			// Emit error event for UI display
+			this.events.emit("physics_initialization_error", {
+				entityId: this.id,
+				entityType: "Starship",
+				error: error as Error,
+				errorMessage: `Failed to initialize physics for Starship: ${error instanceof Error ? error.message : String(error)}`
+			});
+			
 			// Create a fallback simple box collider if physics initialization fails
 			try {
 				const fallbackRb = rapierWorld.createRigidBody(
@@ -107,6 +116,14 @@ export class Starship
 					"Failed to create fallback physics for Starship:",
 					fallbackError
 				);
+				
+				// Emit error event for fallback failure as well
+				this.events.emit("physics_initialization_error", {
+					entityId: this.id,
+					entityType: "Starship",
+					error: fallbackError as Error,
+					errorMessage: `Failed to create fallback physics for Starship: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`
+				});
 			}
 		}
 	}

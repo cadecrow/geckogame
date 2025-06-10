@@ -11,6 +11,7 @@ export default function GeckoGamePage() {
 	const [gameStage, setGameStage] = useState<GameStage>("loading");
 	const [lobbyFadingOut, setLobbyFadingOut] = useState(false);
 	const [startButtonFadingOut, setStartButtonFadingOut] = useState(false);
+	const [hasPhysicsErrors, setHasPhysicsErrors] = useState(false);
 
 	useEffect(() => {
 		// Ensure this code runs only on the client side
@@ -37,8 +38,31 @@ export default function GeckoGamePage() {
 		}
 	}, [loading, gameStage]);
 
+	useEffect(() => {
+		// Listen for physics errors
+		if (geckoGameRef.current) {
+			const handlePhysicsError = () => {
+				setHasPhysicsErrors(geckoGameRef.current?.hasPhysicsErrors || false);
+			};
+
+			// Listen for physics initialization errors
+			geckoGameRef.current.eventBus.on("physics_initialization_error", handlePhysicsError);
+
+			// Check initial state
+			handlePhysicsError();
+
+			// Cleanup listener on unmount
+			return () => {
+				if (geckoGameRef.current) {
+					// Note: EventBus doesn't have an off method, so we can't clean up perfectly
+					// This is acceptable for this use case
+				}
+			};
+		}
+	}, [loading]); // Re-run when loading changes (game manager is created)
+
 	const handleStartGame = () => {
-		if (!geckoGameRef.current) return;
+		if (!geckoGameRef.current || hasPhysicsErrors) return;
 
 		// Start both fade-outs immediately when button is clicked
 		setStartButtonFadingOut(true);
@@ -216,39 +240,55 @@ export default function GeckoGamePage() {
 						{/* Start Game Button */}
 						<button
 							onClick={handleStartGame}
+							disabled={hasPhysicsErrors}
 							style={{
 								padding: "12px 24px",
-								backgroundColor: "hsla(0, 0%, 35%, 0.7)",
-								color: "white",
+								backgroundColor: hasPhysicsErrors 
+									? "hsla(0, 0%, 20%, 0.5)" 
+									: "hsla(0, 0%, 35%, 0.7)",
+								color: hasPhysicsErrors ? "rgba(255, 255, 255, 0.5)" : "white",
 								borderRadius: "5px",
 								fontFamily: "Arial, sans-serif",
 								fontSize: "16px",
 								fontWeight: "bold",
-								border: "1px solid rgba(255, 255, 255, 0.3)",
-								cursor: "pointer",
+								border: `1px solid ${hasPhysicsErrors ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.3)"}`,
+								cursor: hasPhysicsErrors ? "not-allowed" : "pointer",
 								zIndex: "1001",
 								opacity: startButtonFadingOut ? 0 : 1,
-								transition: "opacity 1.5s ease, transform 0.2s ease",
+								transition: "opacity 1.5s ease, transform 0.2s ease, background-color 0.3s ease",
 								transform: "scale(1)",
 								textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
 							}}
 							onMouseEnter={(e) => {
-								if (!startButtonFadingOut) {
+								if (!startButtonFadingOut && !hasPhysicsErrors) {
 									e.currentTarget.style.transform = "scale(1.05)";
 									e.currentTarget.style.backgroundColor =
 										"hsla(0, 0%, 45%, 0.8)";
 								}
 							}}
 							onMouseLeave={(e) => {
-								if (!startButtonFadingOut) {
+								if (!startButtonFadingOut && !hasPhysicsErrors) {
 									e.currentTarget.style.transform = "scale(1)";
 									e.currentTarget.style.backgroundColor =
 										"hsla(0, 0%, 35%, 0.7)";
 								}
 							}}
 						>
-							Start Game
+							{hasPhysicsErrors ? "Physics Errors Detected" : "Start Game"}
 						</button>
+						{hasPhysicsErrors && (
+							<div
+								style={{
+									marginTop: "12px",
+									color: "#ff6b6b",
+									fontSize: "14px",
+									textAlign: "center",
+									textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+								}}
+							>
+								Please reload the page to resolve physics initialization errors
+							</div>
+						)}
 					</div>
 				</div>
 			)}

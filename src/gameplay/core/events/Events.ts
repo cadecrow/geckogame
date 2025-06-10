@@ -26,6 +26,17 @@ export interface EventRegistry {
 	player_orientation_adjust: {
 		direction: "LEFT" | "RIGHT";
 	};
+	player_fell_off_world: {
+		message: string;
+		position: { x: number; y: number; z: number };
+	};
+	player_reset_world_command: void;
+	physics_initialization_error: {
+		entityId: EntityId;
+		entityType: string;
+		error: Error;
+		errorMessage: string;
+	};
 	start_game_command: void;
 
 	// --- INTERNAL EVENT REQUESTS ---

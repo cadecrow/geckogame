@@ -53,7 +53,10 @@ export class Player
 
 	// Fall detection
 	private hasFallen: boolean = false; // Track if player has fallen off the platform
-	private readonly FALL_THRESHOLD = -150; // Y position threshold for falling
+	private readonly FALL_THRESHOLD = -75; // Y position threshold for falling
+
+	// Halt state
+	private isHalted: boolean = false; // Track if player physics updates are suspended
 
 	// Logging state tracking
 	private lastForceApplied: { x: number; z: number } = { x: 0, z: 0 }; // Track previous force for change detection
@@ -201,9 +204,24 @@ export class Player
 				);
 			}
 		);
+
+		// Listen for player reset command (when they want to return to starting platform)
+		this.events.on("player_reset_world_command", () => {
+			console.log("Player: Received reset world command");
+			this.resetPlayerPosition();
+			this.unhalt();
+		});
 	}
 
 	private updateMovementVector(): void {
+		// If player has fallen or is halted, don't allow movement
+		if (this.hasFallen || this.isHalted) {
+			this.movementVector.x = 0;
+			this.movementVector.y = 0;
+			this.movementVector.z = 0;
+			return;
+		}
+
 		// Reset the vector
 		this.movementVector.x = 0;
 		this.movementVector.y = 0;
@@ -289,6 +307,9 @@ export class Player
 	}
 
 	private handleJump(): void {
+		// Don't allow jumping if player has fallen or is halted
+		if (this.hasFallen || this.isHalted) return;
+
 		if (this.rigidBodies.length === 0) return;
 
 		const rigidBody = this.rigidBodies[0];
@@ -315,6 +336,67 @@ export class Player
 				2
 			)}, y=${jumpImpulse.y.toFixed(2)}, z=${jumpImpulse.z.toFixed(2)}`
 		);
+	}
+
+	private handlePlayerFall(): void {
+		console.log(
+			"Player: Fallen off world! Stopping movement and prompting return."
+		);
+
+		// Stop all movement
+		this.hasFallen = true;
+		this.movementState.clear();
+		this.isMoving = false;
+		this.isHalted = true;
+
+		// Stop current animations and play idle
+		if (this.currentAnimation) {
+			this.currentAnimation.fadeOut(0.2);
+		}
+		this.playAnimation("idle");
+
+		// Emit event to show UI prompt
+		this.events.emit("player_fell_off_world", {
+			message: "You've fallen off the map!.",
+			position: { x: 0, y: 5, z: 0 }, // Starting position
+		});
+	}
+
+	private resetPlayerPosition(): void {
+		if (this.rigidBodies.length === 0) return;
+
+		const rigidBody = this.rigidBodies[0];
+		if (!rigidBody) return;
+
+		console.log("Player: Resetting position to starting platform.");
+
+		// Reset position to starting platform
+		const startingPosition = new RAPIER.Vector3(0, 5, 0);
+		rigidBody.setTranslation(startingPosition, true);
+
+		// Stop all velocity
+		rigidBody.setLinvel(new RAPIER.Vector3(0, 0, 0), true);
+		rigidBody.setAngvel(new RAPIER.Vector3(0, 0, 0), true);
+
+		// Reset fall state
+		this.hasFallen = false;
+
+		console.log("Player: Successfully reset to starting position.");
+	}
+
+	// --- Halt State Control Methods ---
+	public halt(): void {
+		this.isHalted = true;
+		console.log("Player: Movement halted - physics updates suspended");
+	}
+
+	public unhalt(): void {
+		this.isHalted = false;
+		console.log("Player: Movement unhalted - physics updates resumed");
+	}
+
+	public isPlayerHalted(): boolean {
+		return this.isHalted;
 	}
 
 	private playAnimation(animationName: string): void {
@@ -385,6 +467,17 @@ export class Player
 			}
 		} catch (error) {
 			console.error("Failed to initialize physics for Player:", error);
+
+			// Emit error event for UI display
+			this.events.emit("physics_initialization_error", {
+				entityId: this.id,
+				entityType: "Player",
+				error: error as Error,
+				errorMessage: `Failed to initialize physics for Player: ${
+					error instanceof Error ? error.message : String(error)
+				}`,
+			});
+
 			// Create a fallback simple collider if physics initialization fails
 			try {
 				console.log("Player: Creating fallback physics");
@@ -407,6 +500,18 @@ export class Player
 					"Failed to create fallback physics for Player:",
 					fallbackError
 				);
+
+				// Emit error event for fallback failure as well
+				this.events.emit("physics_initialization_error", {
+					entityId: this.id,
+					entityType: "Player",
+					error: fallbackError as Error,
+					errorMessage: `Failed to create fallback physics for Player: ${
+						fallbackError instanceof Error
+							? fallbackError.message
+							: String(fallbackError)
+					}`,
+				});
 			}
 		}
 		console.log(
@@ -419,6 +524,11 @@ export class Player
 		// removing for now - eslint-disable-next-line @typescript-eslint/no-unused-vars
 		// rapierWorld: RAPIER.World
 	): void {
+		// Early return if player is halted - suspend all physics updates
+		if (this.isHalted) {
+			return;
+		}
+
 		if (this.rigidBodies.length === 0) {
 			console.log("Player: No rigid bodies for physics update");
 			return;
@@ -432,12 +542,19 @@ export class Player
 
 		this.frameCount++;
 
+		// Get current position for fall detection
+		const currentPos = rigidBody.translation();
+
+		// Check for fall detection
+		if (!this.hasFallen && currentPos.y <= this.FALL_THRESHOLD) {
+			this.handlePlayerFall();
+		}
+
 		// Set velocity directly using cached movement vector
 		const currentVelocity = rigidBody.linvel();
 
 		// Only log position every 100 frames
 		if (this.frameCount % 100 === 0) {
-			const currentPos = rigidBody.translation();
 			console.log(
 				`Player: Position at frame ${this.frameCount}: x=${currentPos.x.toFixed(
 					2

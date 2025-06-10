@@ -7,7 +7,9 @@ type UI_ELEMENT =
 	| "keyboard_helper_question_mark"
 	| "keyboard_helper_expanded_content"
 	| "orientation_helper"
-	| "forward_controls";
+	| "forward_controls"
+	| "fall_notification"
+	| "physics_errors";
 
 export class UIManager {
 	// meta members
@@ -15,6 +17,12 @@ export class UIManager {
 	private readonly container: HTMLElement;
 	// local members
 	private readonly elements: Map<UI_ELEMENT, HTMLElement>;
+	private physicsErrors: Array<{
+		entityId: string;
+		entityType: string;
+		error: Error;
+		errorMessage: string;
+	}> = [];
 
 	constructor(events: EventBus, container: HTMLElement) {
 		this.container = container;
@@ -31,6 +39,11 @@ export class UIManager {
 		this.elements.clear(); // todo - is this needed?
 	}
 
+	// Public getter for physics errors count
+	public getPhysicsErrorsCount(): number {
+		return this.physicsErrors.length;
+	}
+
 	// --- core init ---
 
 	private init(): void {
@@ -43,10 +56,20 @@ export class UIManager {
 			"forward_controls",
 			this.initForwardControls(this.events)
 		);
+		this.addUiElement("fall_notification", this.initFallNotification());
+		this.addUiElement("physics_errors", this.initPhysicsErrorsNotification());
 	}
 
 	private initEventListeners(): void {
 		this.events.on("game_mode_updated", this.handleGameModeUpdated.bind(this));
+		this.events.on(
+			"player_fell_off_world",
+			this.handlePlayerFellOffWorld.bind(this)
+		);
+		this.events.on(
+			"physics_initialization_error",
+			this.handlePhysicsInitializationError.bind(this)
+		);
 	}
 
 	// --- event handlers ---
@@ -361,6 +384,222 @@ export class UIManager {
 			"Click on a wall to climb. Press ESC to cancel.";
 
 		return helpTextElement;
+	}
+
+	// --- fall notification
+	private initFallNotification(): HTMLDivElement {
+		const fallNotification = document.createElement("div");
+		fallNotification.style.display = "none"; // initially hidden
+		fallNotification.style.position = "absolute";
+		fallNotification.style.top = "50%";
+		fallNotification.style.left = "50%";
+		fallNotification.style.transform = "translate(-50%, -50%)";
+		fallNotification.style.padding = "30px";
+		fallNotification.style.backgroundColor = "rgba(0, 0, 0, 0.9)";
+		fallNotification.style.color = "white";
+		fallNotification.style.borderRadius = "10px";
+		fallNotification.style.fontFamily = "Arial, sans-serif";
+		fallNotification.style.fontSize = "18px";
+		fallNotification.style.textAlign = "center";
+		fallNotification.style.zIndex = "2000";
+		fallNotification.style.border = "2px solid #ff4444";
+		fallNotification.style.maxWidth = "400px";
+
+		// Create message text
+		const messageText = document.createElement("div");
+		messageText.style.marginBottom = "20px";
+		messageText.style.lineHeight = "1.4";
+		messageText.textContent = "You've fallen off the world!";
+
+		// Create reset button
+		const resetButton = document.createElement("button");
+		resetButton.textContent = "Return to Platform";
+		resetButton.style.padding = "12px 24px";
+		resetButton.style.fontSize = "16px";
+		resetButton.style.backgroundColor = "#4CAF50";
+		resetButton.style.color = "white";
+		resetButton.style.border = "none";
+		resetButton.style.borderRadius = "5px";
+		resetButton.style.cursor = "pointer";
+		resetButton.style.fontWeight = "bold";
+		resetButton.style.transition = "background-color 0.3s ease";
+
+		// Button hover effect
+		resetButton.onmouseenter = () => {
+			resetButton.style.backgroundColor = "#45a049";
+		};
+		resetButton.onmouseleave = () => {
+			resetButton.style.backgroundColor = "#4CAF50";
+		};
+
+		// Button click handler - emit event to reset player
+		resetButton.onclick = () => {
+			console.log(
+				"UIManager: Player requested reset via fall notification button"
+			);
+			this.events.emit("player_reset_world_command", undefined);
+			this.hideElement("fall_notification");
+		};
+
+		// Assemble notification
+		fallNotification.appendChild(messageText);
+		fallNotification.appendChild(resetButton);
+
+		return fallNotification;
+	}
+
+	private handlePlayerFellOffWorld(payload: {
+		message: string;
+		position: { x: number; y: number; z: number };
+	}): void {
+		console.log("UIManager: Player fell off world, showing notification");
+
+		// Update the message text
+		const notification = this.elements.get("fall_notification");
+		if (notification) {
+			const messageText = notification.querySelector("div");
+			if (messageText) {
+				messageText.textContent = payload.message;
+			}
+		}
+
+		// Show the notification
+		this.showElement("fall_notification");
+	}
+
+	// --- physics errors notification
+	private initPhysicsErrorsNotification(): HTMLDivElement {
+		const physicsErrorsNotification = document.createElement("div");
+		physicsErrorsNotification.style.display = "none"; // initially hidden
+		physicsErrorsNotification.style.position = "absolute";
+		physicsErrorsNotification.style.top = "50%";
+		physicsErrorsNotification.style.left = "50%";
+		physicsErrorsNotification.style.transform = "translate(-50%, -50%)";
+		physicsErrorsNotification.style.padding = "30px";
+		physicsErrorsNotification.style.backgroundColor = "rgba(0, 0, 0, 0.95)";
+		physicsErrorsNotification.style.color = "white";
+		physicsErrorsNotification.style.borderRadius = "10px";
+		physicsErrorsNotification.style.fontFamily = "Arial, sans-serif";
+		physicsErrorsNotification.style.fontSize = "16px";
+		physicsErrorsNotification.style.textAlign = "left";
+		physicsErrorsNotification.style.zIndex = "2000";
+		physicsErrorsNotification.style.border = "2px solid #ff6b6b";
+		physicsErrorsNotification.style.maxWidth = "600px";
+		physicsErrorsNotification.style.maxHeight = "70vh";
+		physicsErrorsNotification.style.overflowY = "auto";
+
+		// Create title
+		const title = document.createElement("h2");
+		title.textContent = "Physics Initialization Errors";
+		title.style.margin = "0 0 20px 0";
+		title.style.color = "#ff6b6b";
+		title.style.fontSize = "24px";
+		title.style.textAlign = "center";
+
+		// Create error list container
+		const errorList = document.createElement("div");
+		errorList.className = "error-list";
+		errorList.style.marginBottom = "20px";
+
+		// Create reload instructions
+		const instructions = document.createElement("div");
+		instructions.textContent = "These errors may prevent the game from working correctly. Please reload the page and try again.";
+		instructions.style.marginBottom = "20px";
+		instructions.style.padding = "15px";
+		instructions.style.backgroundColor = "rgba(255, 107, 107, 0.1)";
+		instructions.style.borderRadius = "5px";
+		instructions.style.border = "1px solid #ff6b6b";
+
+		// Create reload button
+		const reloadButton = document.createElement("button");
+		reloadButton.textContent = "Reload Page";
+		reloadButton.style.padding = "12px 24px";
+		reloadButton.style.fontSize = "16px";
+		reloadButton.style.backgroundColor = "#ff6b6b";
+		reloadButton.style.color = "white";
+		reloadButton.style.border = "none";
+		reloadButton.style.borderRadius = "5px";
+		reloadButton.style.cursor = "pointer";
+		reloadButton.style.fontWeight = "bold";
+		reloadButton.style.transition = "background-color 0.3s ease";
+		reloadButton.style.display = "block";
+		reloadButton.style.margin = "0 auto";
+
+		// Button hover effect
+		reloadButton.onmouseenter = () => {
+			reloadButton.style.backgroundColor = "#ff5252";
+		};
+		reloadButton.onmouseleave = () => {
+			reloadButton.style.backgroundColor = "#ff6b6b";
+		};
+
+		// Button click handler - reload the page
+		reloadButton.onclick = () => {
+			window.location.reload();
+		};
+
+		// Assemble notification
+		physicsErrorsNotification.appendChild(title);
+		physicsErrorsNotification.appendChild(instructions);
+		physicsErrorsNotification.appendChild(errorList);
+		physicsErrorsNotification.appendChild(reloadButton);
+
+		return physicsErrorsNotification;
+	}
+
+	private handlePhysicsInitializationError(payload: {
+		entityId: string;
+		entityType: string;
+		error: Error;
+		errorMessage: string;
+	}): void {
+		console.log("UIManager: Physics initialization error received", payload);
+		
+		// Add error to the array
+		this.physicsErrors.push(payload);
+		
+		// Update the error list display
+		this.updatePhysicsErrorsDisplay();
+		
+		// Show the notification
+		this.showElement("physics_errors");
+	}
+
+	private updatePhysicsErrorsDisplay(): void {
+		const notification = this.elements.get("physics_errors");
+		if (!notification) return;
+
+		const errorList = notification.querySelector(".error-list");
+		if (!errorList) return;
+
+		// Clear existing errors
+		errorList.innerHTML = "";
+
+		// Add each error to the list
+		this.physicsErrors.forEach((error, index) => {
+			const errorItem = document.createElement("div");
+			errorItem.style.marginBottom = "15px";
+			errorItem.style.padding = "15px";
+			errorItem.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+			errorItem.style.borderRadius = "5px";
+			errorItem.style.border = "1px solid rgba(255, 107, 107, 0.3)";
+
+			const errorTitle = document.createElement("h4");
+			errorTitle.textContent = `Error ${index + 1}: ${error.entityType} (${error.entityId})`;
+			errorTitle.style.margin = "0 0 10px 0";
+			errorTitle.style.color = "#ff6b6b";
+			errorTitle.style.fontSize = "18px";
+
+			const errorMessage = document.createElement("p");
+			errorMessage.textContent = error.errorMessage;
+			errorMessage.style.margin = "0";
+			errorMessage.style.fontSize = "14px";
+			errorMessage.style.lineHeight = "1.4";
+
+			errorItem.appendChild(errorTitle);
+			errorItem.appendChild(errorMessage);
+			errorList.appendChild(errorItem);
+		});
 	}
 
 	private showElement(el: UI_ELEMENT): void {

@@ -54,6 +54,15 @@ export class LandingPlane
 			}
 		} catch (error) {
 			console.error("Failed to initialize physics for LandingPlane:", error);
+			
+			// Emit error event for UI display
+			this.events.emit("physics_initialization_error", {
+				entityId: this.id,
+				entityType: "LandingPlane",
+				error: error as Error,
+				errorMessage: `Failed to initialize physics for LandingPlane: ${error instanceof Error ? error.message : String(error)}`
+			});
+			
 			// Create a fallback simple collider if physics initialization fails
 			try {
 				const fallbackRb = rapierWorld.createRigidBody(
@@ -71,6 +80,14 @@ export class LandingPlane
 					"Failed to create fallback physics for LandingPlane:",
 					fallbackError
 				);
+				
+				// Emit error event for fallback failure as well
+				this.events.emit("physics_initialization_error", {
+					entityId: this.id,
+					entityType: "LandingPlane",
+					error: fallbackError as Error,
+					errorMessage: `Failed to create fallback physics for LandingPlane: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`
+				});
 			}
 		}
 	}

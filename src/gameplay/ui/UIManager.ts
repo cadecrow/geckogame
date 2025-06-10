@@ -1,4 +1,4 @@
-import * as THREE from "three";
+// import * as THREE from "three";
 import { EventBus } from "../core/events/EventBus";
 import type { GameMode } from "../GameManager";
 
@@ -284,14 +284,17 @@ export class UIManager {
 		leftHalf.style.userSelect = "none";
 		leftHalf.onclick = () => {
 			console.log("forwardControls: move forward direction left 15 degrees");
-			events.emit("update_player_orientation_command", {
-				quaternion: new THREE.Quaternion().setFromAxisAngle(
-					// yes, the vector is already normalized with the provided values.
-					// HOWEVER, setFromAxisAngle method expects a normalized vector,
-					// so the normalize method is added for clarity, to future proof changes, and allow others to quickly copy and paste.
-					new THREE.Vector3(0, 1, 0).normalize(),
-					Math.PI / 12 // 15 degrees in radians
-				),
+			// events.emit("update_player_orientation_command", {
+			// 	quaternion: new THREE.Quaternion().setFromAxisAngle(
+			// 		// yes, the vector is already normalized with the provided values.
+			// 		// HOWEVER, setFromAxisAngle method expects a normalized vector,
+			// 		// so the normalize method is added for clarity, to future proof changes, and allow others to quickly copy and paste.
+			// 		new THREE.Vector3(0, 1, 0).normalize(),
+			// 		Math.PI / 12 // 15 degrees in radians
+			// 	),
+			// });
+			events.emit("player_orientation_adjust", {
+				direction: "LEFT",
 			});
 		};
 
@@ -308,12 +311,15 @@ export class UIManager {
 		rightHalf.style.userSelect = "none";
 		rightHalf.onclick = () => {
 			console.log("UI Manager: Change forward direction right 15 degrees");
-			events.emit("update_player_orientation_command", {
-				quaternion: new THREE.Quaternion().setFromAxisAngle(
-					// redundant normalization for certainty and expressiveness
-					new THREE.Vector3(0, 1, 0).normalize(),
-					-Math.PI / 12 // -15 degrees in radians
-				),
+			// events.emit("update_player_orientation_command", {
+			// 	quaternion: new THREE.Quaternion().setFromAxisAngle(
+			// 		// redundant normalization for certainty and expressiveness
+			// 		new THREE.Vector3(0, 1, 0).normalize(),
+			// 		-Math.PI / 12 // -15 degrees in radians
+			// 	),
+			// });
+			events.emit("player_orientation_adjust", {
+				direction: "RIGHT",
 			});
 		};
 

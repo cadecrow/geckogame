@@ -23,6 +23,9 @@ export interface EventRegistry {
 	update_player_orientation_command: {
 		quaternion: THREE.Quaternion;
 	};
+	player_orientation_adjust: {
+		direction: "LEFT" | "RIGHT";
+	};
 	start_game_command: void;
 
 	// --- INTERNAL EVENT REQUESTS ---

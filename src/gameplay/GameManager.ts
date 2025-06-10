@@ -90,6 +90,7 @@ export class GameManager {
 
 		// start game
 		this.events.on("start_game_command", () => {
+			this.events.emit("change_game_mode_command", { gameMode: "normal" });
 			this.update(); // start the game loop
 		});
 	}

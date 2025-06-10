@@ -551,6 +551,10 @@ export class Player
 			return;
 		}
 
+		if (this.currentGameMode !== "normal" && this.currentGameMode !== "gecko") {
+			return;
+		}
+
 		if (this.rigidBodies.length === 0) {
 			console.log("Player: No rigid bodies for physics update");
 			return;

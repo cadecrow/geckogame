@@ -58,6 +58,10 @@ export class Player
 	// Halt state
 	private isHalted: boolean = false; // Track if player physics updates are suspended
 
+	// Game mode tracking
+	// while player is being created we should definitely be in the loading state - if logic changes we may need to revisit this
+	private currentGameMode: string = "loading"; // Track current game mode to control gravity application
+
 	// Logging state tracking
 	private lastForceApplied: { x: number; z: number } = { x: 0, z: 0 }; // Track previous force for change detection
 	private frameCount: number = 0; // Frame counter for position logging
@@ -210,6 +214,24 @@ export class Player
 			console.log("Player: Received reset world command");
 			this.resetPlayerPosition();
 			this.unhalt();
+		});
+
+		// Listen for game mode changes to control when gravity should be applied
+		this.events.on("game_mode_updated", (payload) => {
+			const previousMode = this.currentGameMode;
+			this.currentGameMode = payload.curr;
+			console.log(`Player: Game mode changed from ${previousMode} to ${this.currentGameMode}`);
+			
+			// Reset any accumulated velocity when transitioning to active gameplay
+			if (previousMode === "waiting" && this.currentGameMode === "normal") {
+				if (this.rigidBodies.length > 0 && this.rigidBodies[0]) {
+					const rigidBody = this.rigidBodies[0];
+					// Reset Y velocity to prevent rubber band effect from accumulated gravity
+					const currentVelocity = rigidBody.linvel();
+					rigidBody.setLinvel(new RAPIER.Vector3(currentVelocity.x, 0, currentVelocity.z), true);
+					console.log("Player: Reset Y velocity to prevent gravity rubber band effect");
+				}
+			}
 		});
 	}
 
@@ -575,19 +597,30 @@ export class Player
 			this.lastForceApplied.z = this.movementVector.z;
 		}
 
-		// Apply gravity to current velocity
-		const gravityContribution = new RAPIER.Vector3(
-			this.playerGravity.x * deltaTime,
-			this.playerGravity.y * deltaTime,
-			this.playerGravity.z * deltaTime
-		);
+		// Only apply gravity during active gameplay modes
+		let newVelocity: RAPIER.Vector3;
+		if (this.currentGameMode === "normal" || this.currentGameMode === "gecko") {
+			// Apply gravity to current velocity
+			const gravityContribution = new RAPIER.Vector3(
+				this.playerGravity.x * deltaTime,
+				this.playerGravity.y * deltaTime,
+				this.playerGravity.z * deltaTime
+			);
 
-		// Combine movement velocity with gravity-affected velocity
-		const newVelocity = new RAPIER.Vector3(
-			this.movementVector.x,
-			currentVelocity.y + gravityContribution.y, // Apply gravity to Y velocity
-			this.movementVector.z
-		);
+			// Combine movement velocity with gravity-affected velocity
+			newVelocity = new RAPIER.Vector3(
+				this.movementVector.x,
+				currentVelocity.y + gravityContribution.y, // Apply gravity to Y velocity
+				this.movementVector.z
+			);
+		} else {
+			// Don't apply gravity during loading/waiting modes to prevent accumulation
+			newVelocity = new RAPIER.Vector3(
+				this.movementVector.x,
+				currentVelocity.y, // Keep current Y velocity without adding gravity
+				this.movementVector.z
+			);
+		}
 
 		rigidBody.setLinvel(newVelocity, true);
 

@@ -123,9 +123,9 @@ export default function GeckoGamePage() {
 					<div
 						style={{ marginTop: "12px", color: "white", textAlign: "center" }}
 					>
-						I am hosting everything for free, so it may take a while. Hopefully
-						I haven't gone over usage limits! Otherwise, you may be staring at
-						this screen for a while.
+						I am hosting everything for free, so it may take a minute! 
+						Apologies for making you stare at this screen for a while.
+						The game will be much cooler than the loading spinner!
 					</div>
 					<div
 						style={{

@@ -14,6 +14,7 @@ import {
 	createModelLoader,
 	tryLoadModel,
 } from "../core/utils/modelLoaderUtils";
+import type { GameMode } from "../GameManager";
 
 // Definitions for entity
 const MODEL_PATH: string = "/models/robots/Cute_Bot.glb";
@@ -56,11 +57,11 @@ export class Player
 	private readonly FALL_THRESHOLD = -75; // Y position threshold for falling
 
 	// Halt state
-	private isHalted: boolean = false; // Track if player physics updates are suspended
+	private isHalted: boolean = true; // Track if player physics updates are suspended
 
 	// Game mode tracking
 	// while player is being created we should definitely be in the loading state - if logic changes we may need to revisit this
-	private currentGameMode: string = "loading"; // Track current game mode to control gravity application
+	private currentGameMode: GameMode = "loading"; // Track current game mode to control gravity application
 
 	// Logging state tracking
 	private lastForceApplied: { x: number; z: number } = { x: 0, z: 0 }; // Track previous force for change detection
@@ -128,6 +129,9 @@ export class Player
 
 	private initEventListeners(): void {
 		console.log("Player: Initializing event listeners");
+		this.events.on("start_game_command", () => {
+			this.unhalt();
+		});
 		this.events.on("player_move_command", (payload) => {
 			const { command, direction } = payload;
 			console.log(`Player: Received move command - ${command} ${direction}`);
@@ -220,16 +224,19 @@ export class Player
 		this.events.on("game_mode_updated", (payload) => {
 			const previousMode = this.currentGameMode;
 			this.currentGameMode = payload.curr;
-			console.log(`Player: Game mode changed from ${previousMode} to ${this.currentGameMode}`);
-			
+			console.log(
+				`Player: Game mode changed from ${previousMode} to ${this.currentGameMode}`
+			);
+
 			// Reset any accumulated velocity when transitioning to active gameplay
-			if (previousMode === "waiting" && this.currentGameMode === "normal") {
+			if (previousMode !== "normal") {
 				if (this.rigidBodies.length > 0 && this.rigidBodies[0]) {
 					const rigidBody = this.rigidBodies[0];
 					// Reset Y velocity to prevent rubber band effect from accumulated gravity
-					const currentVelocity = rigidBody.linvel();
-					rigidBody.setLinvel(new RAPIER.Vector3(currentVelocity.x, 0, currentVelocity.z), true);
-					console.log("Player: Reset Y velocity to prevent gravity rubber band effect");
+					rigidBody.setLinvel(new RAPIER.Vector3(0, 0, 0), true);
+					console.log(
+						"Player: Reset Y velocity to prevent gravity rubber band effect"
+					);
 				}
 			}
 		});

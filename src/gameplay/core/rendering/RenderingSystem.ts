@@ -30,6 +30,9 @@ export class RenderingSystem extends System {
 	// ---
 	public clock: THREE.Clock;
 	public orbitControls: OrbitControls;
+	// Camera following
+	private cameraOffset: THREE.Vector3 = new THREE.Vector3(0, 8, 16); // Offset from player position
+	private playerEntity: IRenderableEntity | null = null; // Reference to player for camera following
 
 	constructor(container: HTMLElement, events: EventBus, eM: EntityManager) {
 		super(eM);
@@ -68,6 +71,10 @@ export class RenderingSystem extends System {
 					this.renderer
 				);
 			}
+			
+			// Update camera to follow player
+			this.updateCameraFollowing();
+			
 			this.renderer.render(this.scene, this.camera);
 		}
 	}
@@ -100,8 +107,57 @@ export class RenderingSystem extends System {
 					this.camera,
 					this.renderer
 				);
+				
+				// Check if this is the player entity for camera following
+				if (payload.entity.id === "player") {
+					this.playerEntity = payload.entity as IRenderableEntity;
+					console.log("RenderingSystem: Player entity registered for camera following");
+				}
 			}
 		});
+	}
+
+	private updateCameraFollowing(): void {
+		if (!this.playerEntity) return;
+
+		// Cast to access public forward direction
+		const player = this.playerEntity as IRenderableEntity & { forwardDirection?: THREE.Vector3 };
+		
+		// Get player position
+		const playerPosition = this.playerEntity.group.position;
+
+		// Calculate camera offset based on player's forward direction
+		const orientedOffset = this.cameraOffset.clone();
+		
+		// If player has forward direction, orient the camera offset relative to it
+		if (player.forwardDirection) {
+			// Create rotation from default forward (0,0,1) to player's forward direction
+			const defaultForward = new THREE.Vector3(0, 0, 1);
+			const rotationQuaternion = new THREE.Quaternion();
+			rotationQuaternion.setFromUnitVectors(defaultForward, player.forwardDirection);
+			
+			// Apply rotation to camera offset
+			orientedOffset.applyQuaternion(rotationQuaternion);
+		}
+
+		// Calculate target camera position (player position + oriented offset)
+		const targetCameraPosition = new THREE.Vector3()
+			.copy(playerPosition)
+			.add(orientedOffset);
+
+		// Calculate target look-at position (slightly above player)
+		const targetLookAt = new THREE.Vector3()
+			.copy(playerPosition)
+			.add(new THREE.Vector3(0, 0.5, 0)); // Look at player's head/center
+
+		// Update orbit controls target (what the camera looks at)
+		this.orbitControls.target.copy(targetLookAt);
+
+		// Set camera position
+		this.camera.position.copy(targetCameraPosition);
+
+		// Update orbit controls
+		this.orbitControls.update();
 	}
 
 	// --- event handlers ---

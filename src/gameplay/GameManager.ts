@@ -55,6 +55,11 @@ export class GameManager {
 		return this.events;
 	}
 
+	// Public getter for physics errors count
+	public get hasPhysicsErrors(): boolean {
+		return this.ui.getPhysicsErrorsCount() > 0;
+	}
+
 	public dispose(): void {
 		console.log("Destroying game manager");
 
@@ -90,6 +95,7 @@ export class GameManager {
 
 		// start game
 		this.events.on("start_game_command", () => {
+			this.events.emit("change_game_mode_command", { gameMode: "normal" });
 			this.update(); // start the game loop
 		});
 	}

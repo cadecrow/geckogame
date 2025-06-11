@@ -9,7 +9,9 @@ type UI_ELEMENT =
 	| "orientation_helper"
 	| "forward_controls"
 	| "fall_notification"
-	| "physics_errors";
+	| "physics_errors"
+	| "scan_orb_celebration"
+	| "game_win";
 
 export class UIManager {
 	// meta members
@@ -23,6 +25,7 @@ export class UIManager {
 		error: Error;
 		errorMessage: string;
 	}> = [];
+	private hasShownFirstScanOrbCelebration: boolean = false;
 
 	constructor(events: EventBus, container: HTMLElement) {
 		this.container = container;
@@ -44,6 +47,12 @@ export class UIManager {
 		return this.physicsErrors.length;
 	}
 
+	// Public method to reset scan orb celebration state
+	public resetScanOrbCelebration(): void {
+		console.log("UIManager: Resetting scan orb celebration state");
+		this.hasShownFirstScanOrbCelebration = false;
+	}
+
 	// --- core init ---
 
 	private init(): void {
@@ -58,6 +67,8 @@ export class UIManager {
 		);
 		this.addUiElement("fall_notification", this.initFallNotification());
 		this.addUiElement("physics_errors", this.initPhysicsErrorsNotification());
+		this.addUiElement("scan_orb_celebration", this.initScanOrbCelebration());
+		this.addUiElement("game_win", this.initGameWinNotification());
 	}
 
 	private initEventListeners(): void {
@@ -70,6 +81,11 @@ export class UIManager {
 			"physics_initialization_error",
 			this.handlePhysicsInitializationError.bind(this)
 		);
+		this.events.on(
+			"scan_orb_collision",
+			this.handleScanOrbCollision.bind(this)
+		);
+		this.events.on("game_win_event", this.handleGameWinEvent.bind(this));
 	}
 
 	// --- event handlers ---
@@ -138,7 +154,6 @@ export class UIManager {
 
 	// --- keyboard helper
 	private initKeyboardHelper(): [HTMLElement, HTMLElement] {
-
 		// START IN EXPANDED STATE
 
 		// Question mark element
@@ -213,10 +228,10 @@ export class UIManager {
 		group1.appendChild(kbds);
 
 		// --- Group 2 ---
-		const upDownText = document.createTextNode("Move Up / Down: ");
+		const upDownText = document.createTextNode("Jump: ");
 
 		const spaceKbd = document.createElement("kbd");
-		spaceKbd.textContent = "Space (+ Shift)";
+		spaceKbd.textContent = "Space";
 		spaceKbd.style.backgroundColor = "oklch(0.2 0.007 0)";
 		spaceKbd.style.borderRadius = "12px";
 		spaceKbd.style.padding = "8px";
@@ -507,7 +522,8 @@ export class UIManager {
 
 		// Create reload instructions
 		const instructions = document.createElement("div");
-		instructions.textContent = "These errors may prevent the game from working correctly. Please reload the page and try again.";
+		instructions.textContent =
+			"These errors may prevent the game from working correctly. Please reload the page and try again.";
 		instructions.style.marginBottom = "20px";
 		instructions.style.padding = "15px";
 		instructions.style.backgroundColor = "rgba(255, 107, 107, 0.1)";
@@ -558,13 +574,13 @@ export class UIManager {
 		errorMessage: string;
 	}): void {
 		console.log("UIManager: Physics initialization error received", payload);
-		
+
 		// Add error to the array
 		this.physicsErrors.push(payload);
-		
+
 		// Update the error list display
 		this.updatePhysicsErrorsDisplay();
-		
+
 		// Show the notification
 		this.showElement("physics_errors");
 	}
@@ -589,7 +605,9 @@ export class UIManager {
 			errorItem.style.border = "1px solid rgba(255, 107, 107, 0.3)";
 
 			const errorTitle = document.createElement("h4");
-			errorTitle.textContent = `Error ${index + 1}: ${error.entityType} (${error.entityId})`;
+			errorTitle.textContent = `Error ${index + 1}: ${error.entityType} (${
+				error.entityId
+			})`;
 			errorTitle.style.margin = "0 0 10px 0";
 			errorTitle.style.color = "#ff6b6b";
 			errorTitle.style.fontSize = "18px";
@@ -622,5 +640,221 @@ export class UIManager {
 			element.style.display = "none";
 			element.style.opacity = "0";
 		}
+	}
+
+	// --- scan orb celebration ---
+	private initScanOrbCelebration(): HTMLDivElement {
+		const celebration = document.createElement("div");
+		celebration.style.display = "none"; // initially hidden
+		celebration.style.position = "absolute";
+		celebration.style.top = "50%";
+		celebration.style.left = "50%";
+		celebration.style.transform = "translate(-50%, -50%)";
+		celebration.style.padding = "40px";
+		celebration.style.backgroundColor = "rgba(0, 255, 170, 0.95)";
+		celebration.style.color = "white";
+		celebration.style.borderRadius = "20px";
+		celebration.style.fontFamily = "Arial, sans-serif";
+		celebration.style.fontSize = "24px";
+		celebration.style.textAlign = "center";
+		celebration.style.zIndex = "3000";
+		celebration.style.border = "3px solid #00ffaa";
+		celebration.style.boxShadow = "0 0 30px rgba(0, 255, 170, 0.6)";
+		celebration.style.maxWidth = "500px";
+		celebration.style.animation = "celebrationPulse 0.5s ease-in-out";
+		celebration.style.transition = "opacity 0.3s ease";
+
+		// Add CSS animation keyframes
+		const style = document.createElement("style");
+		style.textContent = `
+			@keyframes celebrationPulse {
+				0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+				50% { transform: translate(-50%, -50%) scale(1.1); }
+				100% { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+			}
+			@keyframes confetti {
+				0% { transform: translateY(-100vh) rotate(0deg); }
+				100% { transform: translateY(100vh) rotate(360deg); }
+			}
+		`;
+		document.head.appendChild(style);
+
+		const messageText = document.createElement("div");
+		messageText.className = "celebration-message";
+		messageText.style.fontSize = "28px";
+		messageText.style.fontWeight = "bold";
+		messageText.style.marginBottom = "20px";
+		messageText.style.textShadow = "2px 2px 4px rgba(0,0,0,0.5)";
+
+		celebration.appendChild(messageText);
+
+		return celebration;
+	}
+
+	private handleScanOrbCollision(): void {
+		const celebration = this.elements.get("scan_orb_celebration");
+		if (!celebration) return;
+
+		const messageElement = celebration.querySelector(".celebration-message");
+		if (!messageElement) return;
+
+		if (this.hasShownFirstScanOrbCelebration) {
+			this.showConfetti();
+		} else {
+			// First collision - show encouraging message
+			messageElement.textContent =
+				"Great Job! You Scanned your first location! Find the rest of the locations to scan!";
+			this.showCelebration();
+			this.showConfetti();
+			this.hasShownFirstScanOrbCelebration = true;
+		}
+	}
+
+	private showCelebration(): void {
+		const celebration = this.elements.get("scan_orb_celebration");
+		if (celebration) {
+			celebration.style.display = "block";
+			celebration.style.opacity = "1";
+
+			// Auto-hide after 3 seconds
+			setTimeout(() => {
+				this.hideElement("scan_orb_celebration");
+			}, 3000);
+		}
+	}
+
+	private async showConfetti(): Promise<void> {
+		// Create multiple confetti pieces
+		const colors = [
+			"#ff6b6b",
+			"#4ecdc4",
+			"#45b7d1",
+			"#96ceb4",
+			"#feca57",
+			"#ff9ff3",
+		];
+		const confettiCount = 500;
+
+		for (let i = 0; i < confettiCount; i++) {
+			if (i % 100 === 0) {
+				await new Promise((resolve) => setTimeout(resolve, 100));
+			}
+			const confetti = document.createElement("div");
+			confetti.style.position = "absolute";
+			confetti.style.width = "10px";
+			confetti.style.height = "10px";
+			confetti.style.backgroundColor =
+				colors[Math.floor(Math.random() * colors.length)];
+			confetti.style.left = Math.random() * 99 + "%";
+			confetti.style.top = "-20px";
+			confetti.style.borderRadius = "50%";
+			confetti.style.zIndex = "4000";
+			confetti.style.pointerEvents = "none";
+			confetti.style.animation = `confetti ${Math.max(
+				1,
+				Math.random() * 2
+			)}s linear forwards`;
+
+			this.container.appendChild(confetti);
+
+			// Remove confetti after animation
+			setTimeout(() => {
+				if (this.container.contains(confetti)) {
+					this.container.removeChild(confetti);
+				}
+			}, 2000);
+		}
+	}
+
+	private initGameWinNotification(): HTMLDivElement {
+		const gameWinNotification = document.createElement("div");
+		gameWinNotification.style.display = "none"; // initially hidden
+		gameWinNotification.style.position = "absolute";
+		gameWinNotification.style.top = "50%";
+		gameWinNotification.style.left = "50%";
+		gameWinNotification.style.transform = "translate(-50%, -50%)";
+		gameWinNotification.style.padding = "40px";
+		gameWinNotification.style.backgroundColor = "rgba(0, 255, 170, 0.95)";
+		gameWinNotification.style.color = "white";
+		gameWinNotification.style.borderRadius = "20px";
+		gameWinNotification.style.fontFamily = "Arial, sans-serif";
+		gameWinNotification.style.fontSize = "24px";
+		gameWinNotification.style.textAlign = "center";
+		gameWinNotification.style.zIndex = "3000";
+		gameWinNotification.style.border = "3px solid #00ffaa";
+		gameWinNotification.style.boxShadow = "0 0 30px rgba(0, 255, 170, 0.6)";
+		gameWinNotification.style.maxWidth = "500px";
+		gameWinNotification.style.animation = "gameWinNotificationPulse 0.5s ease-in-out";
+		gameWinNotification.style.transition = "opacity 0.3s ease";
+
+		// Add CSS animation keyframes
+		const style = document.createElement("style");
+		style.textContent = `
+			@keyframes gameWinNotificationPulse {
+				0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+				50% { transform: translate(-50%, -50%) scale(1.1); }
+				100% { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+			}
+			@keyframes confetti {
+				0% { transform: translateY(-100vh) rotate(0deg); }
+				100% { transform: translateY(100vh) rotate(360deg); }
+			}
+		`;
+		document.head.appendChild(style);
+
+		const messageText = document.createElement("div");
+		messageText.className = "gameWinNotification-message";
+		messageText.style.fontSize = "28px";
+		messageText.style.fontWeight = "bold";
+		messageText.style.marginBottom = "20px";
+		messageText.style.textShadow = "2px 2px 4px rgba(0,0,0,0.5)";
+		messageText.textContent = "Congratulations! You've won the game!";
+
+		gameWinNotification.appendChild(messageText);
+
+		// // Create reset button
+		// const resetButton = document.createElement("button");
+		// resetButton.textContent = "Restart Game";
+		// resetButton.style.padding = "12px 24px";
+		// resetButton.style.fontSize = "16px";
+		// resetButton.style.backgroundColor = "#4CAF50";
+		// resetButton.style.color = "white";
+		// resetButton.style.border = "none";
+		// resetButton.style.borderRadius = "5px";
+		// resetButton.style.cursor = "pointer";
+		// resetButton.style.fontWeight = "bold";
+		// resetButton.style.transition = "background-color 0.3s ease";
+
+		// // Button hover effect
+		// resetButton.onmouseenter = () => {
+		// 	resetButton.style.backgroundColor = "#45a046";
+		// };
+		// resetButton.onmouseleave = () => {
+		// 	resetButton.style.backgroundColor = "#4CAF50";
+		// };
+
+		// // Button click handler - emit event to reset player and recreate scan orb
+		// resetButton.onclick = () => {
+		// 	console.log(
+		// 		"UIManager: Player requested reset via game win notification button"
+		// 	);
+		// 	console.log("UIManager: Emitting player_reset_world_command");
+		// 	this.events.emit("player_reset_world_command", undefined);
+		// 	console.log("UIManager: Emitting recreate_scan_orb_command");
+		// 	this.events.emit("recreate_scan_orb_command", undefined);
+		// 	console.log("UIManager: Both reset commands emitted, hiding game win modal");
+		// 	this.hideElement("game_win");
+		// };
+
+		// Assemble notification
+		gameWinNotification.appendChild(messageText);
+		// gameWinNotification.appendChild(resetButton);
+
+		return gameWinNotification;
+	}
+
+	private handleGameWinEvent(): void {
+		console.log("UIManager: Game win event received");
+		this.showElement("game_win");
 	}
 }

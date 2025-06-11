@@ -38,9 +38,15 @@ export interface EventRegistry {
 		errorMessage: string;
 	};
 	start_game_command: void;
-
+	game_win_event: void;
+	scan_orb_collision: void;
+	scan_orb_position_changed: void;
+	recreate_scan_orb_command: void;
+	
 	// --- INTERNAL EVENT REQUESTS ---
 	// convention: <requester>_request_<description>_<target>
+	entity_dispose_physics_request: { entityId: EntityId };
+	entity_dispose_rendering_request: { entityId: EntityId };
 
 	// --- INTERNAL STATUS EVENTS ---
 	entity_model_load_error: { entityId: EntityId; error: Error };

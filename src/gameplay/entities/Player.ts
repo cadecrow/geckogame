@@ -587,7 +587,7 @@ export class Player
 		const currentVelocity = rigidBody.linvel();
 
 		// Only log position every 100 frames
-		if (this.frameCount % 100 === 0) {
+		if (this.frameCount % 1000 === 0) {
 			console.log(
 				`Player: Position at frame ${this.frameCount}: x=${currentPos.x.toFixed(
 					2

@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import { UIManager } from "./ui/UIManager";
 import { RenderingSystem } from "./core/rendering/RenderingSystem";
 import { EventBus } from "./core/events/EventBus";
@@ -7,6 +8,7 @@ import { EntityManager } from "./core/ec-s/EntityManager";
 import { LandingPlane } from "./entities/LandingPlane";
 import { Starship } from "./entities/Starship";
 import { Player } from "./entities/Player";
+import { ScanOrb } from "./entities/ScanOrb";
 
 // difference between a manager and a system?
 // manager will have some of its own logic that controls its children
@@ -33,6 +35,11 @@ export class GameManager {
 	// ---
 	public gameMode: GameMode = "loading";
 	// ---
+	private scanOrbPositions: THREE.Vector3[] = [
+		new THREE.Vector3(0, 3, -5), // First checkpoint - near starting area
+		new THREE.Vector3(0, -40, -72), // second checkpoint
+	];
+	private scanOrbIndex: number = 0;
 
 	constructor(container: HTMLElement, setLoading: (loading: boolean) => void) {
 		this.container = container;
@@ -96,11 +103,81 @@ export class GameManager {
 		// start game
 		this.events.on("start_game_command", () => {
 			this.events.emit("change_game_mode_command", { gameMode: "normal" });
+			this.initializeScanOrb();
 			this.update(); // start the game loop
+		});
+
+		this.events.on("scan_orb_collision", () => {
+			this.handleScanOrbCollision();
+		});
+
+		this.events.on("recreate_scan_orb_command", () => {
+			this.handleRecreateScanOrb();
+		});
+
+		this.events.on("game_win_event", () => {
+			// this.events.emit("change_game_mode_command", { gameMode: "gecko" });
 		});
 	}
 
 	// --- event handlers ---
+	private handleScanOrbCollision(): void {
+		this.scanOrbIndex++;
+		const scanOrb = this.entityManager.getEntity("scan_orb") as ScanOrb;
+
+		if (this.scanOrbIndex >= this.scanOrbPositions.length) {
+			// Game won - destroy and remove the scan orb
+			console.log("All scan orbs collected! Player wins!");
+			console.log("Destroying scan orb...");
+
+			// Remove the scan orb from the entity manager (this will trigger proper cleanup)
+			this.entityManager.removeEntity("scan_orb");
+
+			// Emit game win event
+			this.events.emit("game_win_event", undefined);
+		} else {
+			// Copy the position values instead of replacing the Vector3 reference
+			const nextPosition = this.scanOrbPositions[this.scanOrbIndex];
+			scanOrb.position.copy(nextPosition);
+			console.log(
+				`Moving scan orb to position ${this.scanOrbIndex}:`,
+				nextPosition
+			);
+			this.events.emit("scan_orb_position_changed", undefined);
+		}
+	}
+
+	// --- utility initializers ---
+	private initializeScanOrb(): void {
+		this.scanOrbIndex = 0;
+		const scanOrb = new ScanOrb(this.events, this.scanOrbPositions[0]);
+		this.entityManager.addEntity(scanOrb);
+		console.log("GameManager: Scan orb created at position:", this.scanOrbPositions[0], "with floating offset:", scanOrb.floatingOffset);
+	}
+
+	private handleRecreateScanOrb(): void {
+		console.log("GameManager: Recreating scan orb and resetting game");
+
+		// Reset scan orb index to beginning
+		this.scanOrbIndex = 0;
+
+		// Reset UI celebration state
+		this.ui.resetScanOrbCelebration();
+
+		// Remove existing scan orb if it exists
+		const existingScanOrb = this.entityManager.getEntity("scan_orb");
+		if (existingScanOrb) {
+			console.log("GameManager: Removing existing scan orb");
+			this.entityManager.removeEntity("scan_orb");
+		}
+
+		// Add a small delay to ensure proper cleanup before recreating
+		setTimeout(() => {
+			console.log("GameManager: Creating new scan orb after cleanup delay");
+			this.initializeScanOrb();
+			console.log("GameManager: Scan orb recreated at starting position");
+		}, 100); // 100ms delay to ensure cleanup completes
+	}
 
 	// --- game loop ---
 	private update(): void {

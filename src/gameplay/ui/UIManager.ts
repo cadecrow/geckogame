@@ -138,6 +138,9 @@ export class UIManager {
 
 	// --- keyboard helper
 	private initKeyboardHelper(): [HTMLElement, HTMLElement] {
+
+		// START IN EXPANDED STATE
+
 		// Question mark element
 		const questionMark = document.createElement("div");
 		questionMark.style.position = "absolute";
@@ -152,7 +155,7 @@ export class UIManager {
 		questionMark.style.fontWeight = "bold";
 		questionMark.style.textAlign = "center";
 		questionMark.style.transition = "opacity 0.3s ease";
-		questionMark.style.opacity = "1";
+		questionMark.style.opacity = "0";
 		questionMark.style.cursor = "pointer";
 		questionMark.textContent = "?";
 
@@ -170,7 +173,7 @@ export class UIManager {
 		expandedContent.style.fontWeight = "normal";
 		expandedContent.style.textAlign = "left";
 		expandedContent.style.transition = "opacity 0.3s ease";
-		expandedContent.style.opacity = "0";
+		expandedContent.style.opacity = "1";
 		expandedContent.style.pointerEvents = "none";
 		expandedContent.style.marginRight = "12px";
 
@@ -260,6 +263,7 @@ export class UIManager {
 
 		expandedContent.appendChild(verticalGroups);
 
+		// note: the content starts out in expanded state. will be hidden after mouse enter and exit.
 		// Hover event handlers
 		questionMark.onmouseenter = () => {
 			questionMark.style.opacity = "0";

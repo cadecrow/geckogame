@@ -71,10 +71,10 @@ export class RenderingSystem extends System {
 					this.renderer
 				);
 			}
-			
+
 			// Update camera to follow player
 			this.updateCameraFollowing();
-			
+
 			this.renderer.render(this.scene, this.camera);
 		}
 	}
@@ -107,13 +107,27 @@ export class RenderingSystem extends System {
 					this.camera,
 					this.renderer
 				);
-				
+
 				// Check if this is the player entity for camera following
 				if (payload.entity.id === "player") {
 					this.playerEntity = payload.entity as IRenderableEntity;
-					console.log("RenderingSystem: Player entity registered for camera following");
+					console.log(
+						"RenderingSystem: Player entity registered for camera following"
+					);
 				}
 			}
+
+			this.events.on("entity_dispose_rendering_request", (payload) => {
+				this.ensureValidCache();
+				const entity = this.entityManager.getEntity(payload.entityId);
+				if (entity && entity.hasComponent(RenderingComponent)) {
+					(entity as IRenderableEntity).disposeRendering(
+						this.scene,
+						this.camera,
+						this.renderer
+					);
+				}
+			});
 		});
 	}
 
@@ -121,21 +135,26 @@ export class RenderingSystem extends System {
 		if (!this.playerEntity) return;
 
 		// Cast to access public forward direction
-		const player = this.playerEntity as IRenderableEntity & { forwardDirection?: THREE.Vector3 };
-		
+		const player = this.playerEntity as IRenderableEntity & {
+			forwardDirection?: THREE.Vector3;
+		};
+
 		// Get player position
 		const playerPosition = this.playerEntity.group.position;
 
 		// Calculate camera offset based on player's forward direction
 		const orientedOffset = this.cameraOffset.clone();
-		
+
 		// If player has forward direction, orient the camera offset relative to it
 		if (player.forwardDirection) {
 			// Create rotation from default forward (0,0,1) to player's forward direction
 			const defaultForward = new THREE.Vector3(0, 0, 1);
 			const rotationQuaternion = new THREE.Quaternion();
-			rotationQuaternion.setFromUnitVectors(defaultForward, player.forwardDirection);
-			
+			rotationQuaternion.setFromUnitVectors(
+				defaultForward,
+				player.forwardDirection
+			);
+
 			// Apply rotation to camera offset
 			orientedOffset.applyQuaternion(rotationQuaternion);
 		}

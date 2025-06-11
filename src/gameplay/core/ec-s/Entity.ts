@@ -20,7 +20,9 @@ export type EntityId =
 	| "player"
 	| "starship"
 	| "landing_plane"
-	| "loading_screen";
+	| "scan_orb"
+	| "loading_screen"
+	| "ghost_player";
 
 export class Entity {
 	protected readonly events: EventBus;

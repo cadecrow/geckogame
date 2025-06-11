@@ -35,6 +35,19 @@ export class EntityManager {
 		return this.entities.get(id);
 	}
 
+	public removeEntity(id: EntityId): boolean {
+		const entity = this.entities.get(id);
+		if (entity) {
+			console.log(`EntityManager: Removing entity ${id}`);
+			this.disposeEntity(entity);
+			this.events.emit("entity_disposed", { entityId: id });
+			return true;
+		} else {
+			console.warn(`EntityManager: Entity ${id} not found for removal`);
+			return false;
+		}
+	}
+
 	public getEntitiesHavingComponent<
 		TComponent extends Component<TEntity>,
 		TEntity extends Entity

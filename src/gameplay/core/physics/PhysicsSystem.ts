@@ -12,6 +12,9 @@ export class PhysicsSystem extends System {
 	private isInitialized = false;
 	private isInitializing = false; // Prevent concurrent initialization
 	private cachedEntities: IPhysicsEntity[] | null = null; // null when cache invalid
+	private scanOrbCollisionActive = false; // Track if we're currently in collision with scan orb
+	private scanOrbCollisionCooldown = 0; // Cooldown timer to prevent rapid-fire events
+	private readonly COLLISION_COOLDOWN_MS = 1000; // 1 second cooldown
 
 	constructor(events: EventBus, gameEntities: EntityManager) {
 		super(gameEntities);
@@ -63,6 +66,9 @@ export class PhysicsSystem extends System {
 		for (const entity of this.cachedEntities as IPhysicsEntity[]) {
 			entity.updatePhysics(deltaTime, this.rapierWorld);
 		}
+		
+		// Check for collisions between scan orb and player
+		this.checkScanOrbCollisions();
 	}
 
 	public dispose(): void {
@@ -101,6 +107,26 @@ export class PhysicsSystem extends System {
 				}
 			}
 		});
+
+		this.events.on("entity_dispose_physics_request", (payload) => {
+			this.ensureValidCache();
+			const entity = this.entityManager.getEntity(payload.entityId);
+			if (entity && entity.hasComponent(PhysicsComponent)) {
+				(entity as IPhysicsEntity).disposePhysics(this.rapierWorld);
+			}
+
+			if (payload.entityId === "scan_orb") {
+				this.scanOrbCollisionActive = false;
+				this.scanOrbCollisionCooldown = 0; // Reset cooldown when orb moves
+			}
+		});
+
+		// Reset collision state when scan orb moves to new position
+		this.events.on("scan_orb_position_changed", () => {
+			console.log("PhysicsSystem: Scan orb moved, resetting collision state and cooldown");
+			this.scanOrbCollisionActive = false;
+			this.scanOrbCollisionCooldown = 0; // Reset cooldown when orb moves
+		});
 	}
 
 	// --- Event Handlers ---
@@ -117,5 +143,52 @@ export class PhysicsSystem extends System {
 			PhysicsComponent,
 			IPhysicsEntity
 		>(PhysicsComponent);
+	}
+
+	// Check for collisions between scan orb and player
+	private checkScanOrbCollisions(): void {
+		// Check cooldown timer
+		const currentTime = Date.now();
+		if (currentTime < this.scanOrbCollisionCooldown) {
+			return; // Still in cooldown, skip collision detection
+		}
+
+		// Get the scan orb and player entities
+		const scanOrbEntity = this.entityManager.getEntity("scan_orb");
+		const playerEntity = this.entityManager.getEntity("player");
+		
+		if (!scanOrbEntity || !playerEntity) return;
+		
+		// Cast to physics entities
+		const scanOrb = scanOrbEntity as IPhysicsEntity;
+		const player = playerEntity as IPhysicsEntity;
+		
+		if (scanOrb.rigidBodies.length === 0 || player.rigidBodies.length === 0) return;
+		
+		// Get positions
+		const scanOrbPos = scanOrb.rigidBodies[0].translation();
+		const playerPos = player.rigidBodies[0].translation();
+		
+		// Calculate distance
+		const distance = Math.sqrt(
+			(scanOrbPos.x - playerPos.x) ** 2 +
+			(scanOrbPos.y - playerPos.y) ** 2 +
+			(scanOrbPos.z - playerPos.z) ** 2
+		);
+		
+		// Check if within collision distance (3 units)
+		const withinCollisionRange = distance < 3.0;
+		
+		if (withinCollisionRange && !this.scanOrbCollisionActive) {
+			// Entering collision - emit event once and start cooldown
+			console.log("PhysicsSystem: Scan orb collision detected!");
+			this.scanOrbCollisionActive = true;
+			this.scanOrbCollisionCooldown = currentTime + this.COLLISION_COOLDOWN_MS;
+			this.events.emit("scan_orb_collision", undefined);
+		} else if (!withinCollisionRange && this.scanOrbCollisionActive) {
+			// Exiting collision - reset state
+			console.log("PhysicsSystem: Scan orb collision ended");
+			this.scanOrbCollisionActive = false;
+		}
 	}
 }
